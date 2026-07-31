@@ -1,0 +1,14 @@
+# Development Dependencies
+# ============================================
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+
+# Include all base requirements
+-r requirements.txt
+
+# Development & Testing Tools
+jurigged==0.6.2  # File watcher for auto-reload during development (used with try/except in main.py)
+pytest==7.4.3  # Testing framework
+pytest-cov==4.1.0  # Coverage reporting for tests
+black==23.12.1  # Code formatter
+flake8==6.1.0  # Static code linter
+mypy==1.8.0  # Static type checker

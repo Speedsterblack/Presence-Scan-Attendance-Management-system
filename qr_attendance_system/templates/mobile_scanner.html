@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - Phone</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+        }
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #1e90ff;
+            box-shadow: 0 0 5px rgba(30, 144, 255, 0.3);
+        }
+        .camera-container {
+            position: relative;
+            width: 100%;
+            margin: 20px 0;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        #camera {
+            width: 100%;
+            display: block;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #startBtn {
+            background: #1e90ff;
+            color: white;
+        }
+        #startBtn:hover {
+            background: #1e7acc;
+        }
+        #startBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #stopBtn {
+            background: #ff4444;
+            color: white;
+        }
+        #stopBtn:hover:not(:disabled) {
+            background: #cc0000;
+        }
+        #stopBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status.info-msg {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #90caf9;
+        }
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #81c784;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef5350;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QR Attendance Scanner</h1>
+        <p class="info">Use your phone camera to scan student QR codes</p>
+
+        <form id="scannerForm">
+            <div class="form-group" id="courseGroup">
+                <label for="courseCode">Course Code:</label>
+                <input type="text" id="courseCode" placeholder="e.g., CS101" required>
+            </div>
+        </form>
+
+        <div class="camera-container">
+            <video id="camera" width="100%" height="auto"></video>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn">Start Scanning</button>
+            <button id="stopBtn" disabled>Stop Scanning</button>
+        </div>
+
+        <div id="status" class="status hidden info-msg">Ready to scan</div>
+    </div>
+
+    <script>
+        const video = document.getElementById('camera');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+        const courseInput = document.getElementById('courseCode');
+        const courseGroup = document.getElementById('courseGroup');
+
+        let stream = null;
+        let isScanning = false;
+        let canvasContext = null;
+        let autoDetectedCourse = null;
+
+        function playSuccessFeedback() {
+            // Short beep using Web Audio API
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const audioCtx = new AudioContext();
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                    oscillator.onended = () => audioCtx.close();
+                }
+            } catch (error) {
+                console.warn('Unable to play success beep:', error);
+            }
+
+            // Vibration feedback on supported phones
+            try {
+                if (navigator.vibrate) {
+                    navigator.vibrate([120, 60, 120]);
+                }
+            } catch (error) {
+                console.warn('Unable to vibrate device:', error);
+            }
+        }
+
+        // Extract course code from URL query parameter (if provided by desktop)
+        function detectCourseFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const course = params.get('course');
+            if (course) {
+                courseInput.value = course;
+                autoDetectedCourse = course;
+                // Hide the course input field since it's auto-detected
+                courseGroup.style.display = 'none';
+                return true;
+            }
+            return false;
+        }
+
+        // Call on page load
+        window.addEventListener('load', () => {
+            if (detectCourseFromUrl()) {
+                updateStatus('Course auto-detected. Enter student ID or tap Start', 'info-msg');
+            }
+        });
+
+        async function startCamera() {
+            try {
+                // First, try the standard modern API
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    try {
+                        // Start with minimal constraints
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment'
+                            },
+                            audio: false
+                        };
+                        stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    } catch (err1) {
+                        console.warn('Constrained request failed:', err1);
+                        // Try without constraints
+                        try {
+                            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                        } catch (err2) {
+                            throw new Error(`Camera permission denied or hardware unavailable: ${err2.message}`);
+                        }
+                    }
+                } else if (navigator.webkitGetUserMedia) {
+                    // Webkit fallback (older Safari/Chrome)
+                    stream = await new Promise((resolve, reject) => {
+                        navigator.webkitGetUserMedia({ video: true, audio: false }, resolve, reject);
+                    });
+                } else if (navigator.mozGetUserMedia) {
+                    // Firefox fallback
+                    stream = await new Promise((resolve, reject) => {
+                        navigator.mozGetUserMedia({ video: true, audio: false }, resolve, reject);
+                    });
+                } else {
+                    updateStatus('Camera API not supported. Try a different browser (Chrome, Firefox, Safari)', 'error');
+                    console.error('No camera API available. Available:', {
+                        mediaDevices: !!navigator.mediaDevices,
+                        getUserMedia: !!navigator.mediaDevices?.getUserMedia,
+                        webkitGetUserMedia: !!navigator.webkitGetUserMedia,
+                        mozGetUserMedia: !!navigator.mozGetUserMedia
+                    });
+                    return;
+                }
+                
+                video.srcObject = stream;
+                video.play().catch(error => console.warn('Autoplay prevented:', error));
+
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                courseInput.disabled = true;
+                isScanning = true;
+
+                updateStatus('Scanning for QR codes...', 'info-msg');
+                scanQRCode();
+            } catch (error) {
+                let errorMsg = error.message;
+                if (errorMsg.includes('Permission denied')) {
+                    errorMsg = 'Camera permission denied. Please allow camera access in browser settings.';
+                } else if (errorMsg.includes('NotAllowedError')) {
+                    errorMsg = 'Camera access not allowed. Check browser permissions.';
+                } else if (errorMsg.includes('NotFoundError')) {
+                    errorMsg = 'No camera device found on this device.';
+                } else if (errorMsg.includes('NotSupportedError')) {
+                    errorMsg = 'Your browser does not support camera access. Try Chrome or Firefox.';
+                } else if (errorMsg.includes('http://')) {
+                    errorMsg = 'Camera over HTTP not supported. Use HTTPS or try with Desktop Scanner instead.';
+                }
+                updateStatus(`Camera error: ${errorMsg}`, 'error');
+                console.error('Detailed error:', error);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            isScanning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            courseInput.disabled = false;
+            updateStatus('Camera stopped', 'info-msg');
+        }
+
+        function scanQRCode() {
+            if (!isScanning) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvasContext = canvas.getContext('2d');
+
+            if (canvas.width > 0 && canvas.height > 0) {
+                canvasContext.drawImage(video, 0, 0);
+                const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code) {
+                    handleScannedCode(code.data);
+                    return; // Exit after successful scan
+                }
+            }
+
+            requestAnimationFrame(scanQRCode);
+        }
+
+        async function handleScannedCode(qrValue) {
+            stopCamera();
+            const courseCode = courseInput.value.trim();
+
+            if (!qrValue || !courseCode) {
+                updateStatus('Missing QR value or course code', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        qr_value: qrValue,
+                        course_code: courseCode
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    updateStatus(`✓ ${result.message}`, 'success');
+                    playSuccessFeedback();
+                    // Allow rescan after 2 seconds
+                    setTimeout(() => {
+                        updateStatus('Ready to scan next student', 'info-msg');
+                        startBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    updateStatus(`✗ ${result.message}`, 'error');
+                    startBtn.disabled = false;
+                }
+            } catch (error) {
+                updateStatus(`Network error: ${error.message}`, 'error');
+                startBtn.disabled = false;
+            }
+        }
+
+        function updateStatus(message, className) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+            statusDiv.classList.remove('hidden');
+        }
+
+        startBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!courseInput.value.trim()) {
+                updateStatus('Please enter a course code', 'error');
+                return;
+            }
+            startCamera();
+        });
+
+        stopBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            stopCamera();
+        });
+
+        // Set up video to fill the container
+        video.addEventListener('loadedmetadata', () => {
+            console.log(`Video size: ${video.videoWidth}x${video.videoHeight}`);
+        });
+
+        // Status already set during page initialization
+    </script>
+</body>
+</html>

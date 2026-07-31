@@ -1,0 +1,60 @@
+{
+  "theme": {
+    "name": "dark"
+  },
+  "scanner": {
+    "cooldown_seconds": 3
+  },
+  "attendance": {
+    "default_grace_minutes": 0
+  },
+  "export": {
+    "default_directory": "C:\\Users\\speed\\OneDrive\\Documents\\dash copy\\Final year Project\\qr_attendance_system\\reports"
+  },
+  "admin": {
+    "auto_refresh_enabled": true,
+    "auto_refresh_interval_seconds": 10,
+    "pin_hash": "pbkdf2_sha256$260000$4xqfIQxYJuJP2j16kRmk9g$AP_XS3xgc8bEtJNd8k92RVtUZ25s03lllrPfW0O6JK0"
+  },
+  "developer": {
+    "password_hash": "pbkdf2_sha256$260000$QHEUHT5o44pUi3XNk43srQ$9MLOLupYh9synv76iLVfce5i0IXxMuCD771JmCrHJP8"
+  },
+  "roles": {
+    "lecturer": {
+      "theme": {
+        "name": "dark"
+      },
+      "scanner": {
+        "cooldown_seconds": 3
+      },
+      "attendance": {
+        "default_grace_minutes": 0
+      },
+      "export": {
+        "default_directory": "C:\\Users\\speed\\OneDrive\\Documents\\dash copy\\Final year Project\\qr_attendance_system\\reports"
+      },
+      "admin": {
+        "auto_refresh_enabled": true,
+        "auto_refresh_interval_seconds": 30
+      }
+    },
+    "admin": {
+      "theme": {
+        "name": "dark"
+      },
+      "scanner": {
+        "cooldown_seconds": 3
+      },
+      "attendance": {
+        "default_grace_minutes": 40
+      },
+      "export": {
+        "default_directory": "C:\\Users\\speed\\OneDrive\\Documents\\dash copy\\Final year Project\\qr_attendance_system\\reports"
+      },
+      "admin": {
+        "auto_refresh_enabled": false,
+        "auto_refresh_interval_seconds": 10
+      }
+    }
+  }
+}

@@ -1,0 +1,575 @@
+
+
+PRESENCE SCAN
+Attendance Management System
+
+
+Desktop QR Code-Based Attendance System for Tertiary Institutions
+
+Project Documentation
+
+Current project stage: functional desktop prototype with role-based access control, QR code generation and scanning, semester-aware administration, audit logging, and developer institution setup.
+
+Prepared by:
+Gad Mensah
+
+2026
+
+
+
+
+TABLE OF CONTENTS
+
+
+1.1  Background to the Study	1
+1.2  Problem Statement	1
+1.3  Research Questions	1
+1.4  Research Aim and Objectives	1
+Aim	1
+Objectives	1
+1.5  Scope of the Study	1
+1.6  Significance of the Study	1
+1.7  Limitations of the Study	1
+1.8  Research Methodology Overview	1
+Data Collection Methods	1
+Development Stack	1
+1.9  Key Terms and Definitions	1
+1.10  Organisation of the Report	1
+2.1  Introduction	1
+2.2  Traditional Attendance Systems	1
+2.3  QR Code Technology	1
+2.4  Automated Attendance Systems — Technology Comparison	1
+2.5  Review of Similar Existing Systems	1
+2.5.1  SmartTendance	1
+2.5.2  Attenqo	1
+2.5.3  UAMS (University Attendance Management System)	1
+2.5.4  Comparative Summary and Research Gap	1
+3.1  Development Methodology	1
+3.2  Requirements Analysis	1
+3.2.1  Functional Requirements	1
+3.2.2  Non-Functional Requirements	1
+3.3  System Architecture	1
+3.4  Database Design	1
+3.5  Input and Output Design	1
+System Inputs	1
+System Outputs	1
+3.6  System Diagrams	1
+3.7  Hardware and Software Requirements	1
+4.1  System Implementation	1
+4.1.1  User Authentication Module	1
+4.1.2  Student QR Code Generation Module	1
+4.1.3  QR Code Scanning Module	1
+4.1.4  Attendance Recording and Reporting Module	1
+4.1.5  Administrative Data Management and Current Version Updates	1
+4.2  Testing Strategy	1
+4.3  Test Cases and Results	1
+4.4  Evaluation	1
+5.1  Summary	1
+5.2  Recommendations	1
+5.3  Future Work	1
+5.4  Conclusion	1
+References	1
+Appendices	1
+Appendix A: Source Code	1
+Appendix B: Interview Questions	1
+Questions for Lecturers	1
+Questions for Students	1
+Appendix C: User Acceptance Testing Survey	1
+
+
+
+  CHAPTER ONE  
+Introduction
+
+
+1.1  Background to the Study
+Attendance management is a critical administrative function in tertiary institutions, serving as a key indicator of student engagement, academic participation, and eligibility for assessments. Institutions have long depended on paper registers, manual roll calls, and circulated signature sheets — methods that are inefficient, susceptible to manipulation, and time-consuming, particularly in large cohorts where manual marking can consume a significant portion of lecture time.
+The global expansion of higher education enrolment has compounded these inefficiencies. As class sizes grow and institutions manage more courses across multiple departments, the administrative overhead of manual attendance recording scales disproportionately. Lecturers are expected to track and maintain accurate records for dozens of students per session, often across multiple cohorts, while simultaneously managing lesson delivery and student engagement.
+The proliferation of affordable digital tools has opened new pathways for automating attendance workflows in higher education. QR (Quick Response) code technology is especially attractive: codes can be generated at negligible cost, scanned in under a second, and deployed without specialist hardware. This project leverages these properties by generating individual QR codes for registered students and providing a webcam-based desktop interface for scanning.
+Unlike many QR-based systems that require a dependable internet connection or full web deployment, Presence Scan operates as a standalone desktop application backed by a local PostgreSQL database and a live camera feed. The system validates each scanned student against the active timetable, checks that the scanning lecturer is assigned to the current course, applies a configurable grace period, and records attendance — all without external network dependency. This architecture makes the system particularly well-suited to institutions with limited or unreliable internet infrastructure, which remain prevalent across sub-Saharan Africa and other developing regions.
+
+1.2  Problem Statement
+Traditional attendance management systems in tertiary institutions are inefficient, time-consuming, and vulnerable to deliberate fraud. Manual recording frequently results in inaccurate records, administrative bottlenecks, and proxy attendance — where one student marks attendance on behalf of an absent peer. The consequences of inaccurate attendance records extend beyond administrative inconvenience: students may be incorrectly barred from examinations, institutional accreditation bodies may receive misleading data, and lecturers face additional workloads reconciling and correcting discrepant records.
+Proxy attendance represents a particularly significant integrity risk. Because manual methods rely solely on physical signatures or verbal confirmation, they provide no reliable mechanism for verifying that the person signing is actually the enrolled student. This vulnerability is widely understood by students and, in the absence of deterrents, is routinely exploited.
+Many existing digital attendance solutions compound these issues by assuming constant internet access or reliance on cloud infrastructure, creating practical barriers for institutions that need a simple, staff-managed desktop solution. This study addresses these gaps by designing and implementing Presence Scan: a desktop QR code-based system that improves recording accuracy, reduces attendance fraud, and simplifies administration in tertiary institutions.
+
+1.3  Research Questions
+The study is guided by the following research questions:
+•	How can QR code technology improve the accuracy and efficiency of attendance management in tertiary institutions?
+•	What are the principal weaknesses of traditional manual attendance systems?
+•	What desktop-based mechanisms can minimise proxy attendance in a QR attendance system?
+•	How can timetable validation and role-based access control improve attendance integrity?
+•	How does Presence Scan compare with manual methods in terms of speed, accuracy, and usability?
+
+1.4  Research Aim and Objectives
+Aim
+To design and implement a secure desktop QR code-based attendance management system tailored to the operational realities of tertiary institutions.
+Objectives
+•	To critically evaluate the limitations of traditional attendance systems in higher education.
+•	To design a desktop QR code workflow encompassing student registration, scanning, and record keeping.
+•	To implement role-based access control for lecturers, administrators, and developer access.
+•	To secure all user credentials using password hashing and controlled password reset flows.
+•	To bind lecturer and course creation to the department of the logged-in administrator or Head of Department.
+•	To automate attendance recording, reporting, analytics, CSV import, and timetable-aware navigation processes.
+•	To evaluate the performance, accuracy, and usability of the proposed system against defined benchmarks.
+
+1.5  Scope of the Study
+This study focuses on the design and implementation of a QR code-based attendance system for tertiary institutions. The current build supports lecturers, administrators (including Heads of Department), and a separate developer entry point for institution setup. Registered students are issued unique QR codes representing their identity within the system.
+The following capabilities are within scope:
+•	Generation and management of QR codes for registered students.
+•	Webcam-based scanning of student QR codes on a desktop interface.
+•	Automatic attendance recording against the active timetable slot.
+•	Generation of per-course and institution-wide attendance reports and statistics.
+•	Role-based access control differentiating lecturer and administrator functions.
+•	Hashed authentication for lecturers, administrators, and developer access.
+•	Department-aware lecturer and course creation, tied to the logged-in administrator or Head of Department.
+•	Lecturer profile management, including create, update, password reset, and delete actions.
+•	CSV import for bulk student and course registration with validation feedback shown in the import dialog.
+•	Semester-aware attendance and registration management.
+•	Special-day and timetable validation for attendance recording and dashboard date navigation.
+•	Admin tools such as audit log viewing, semester rollover, semester archive, and CSV template export.
+•	Per-university deployment structure, where each university uses its own PostgreSQL database with the same schema.
+The following areas are explicitly excluded from scope:
+•	Biometric authentication (fingerprint or facial recognition).
+•	Integration with national student or identity databases.
+•	Financial management or fee-tracking functionality.
+
+1.6  Significance of the Study
+This study makes both practical and academic contributions. Practically, Presence Scan reduces administrative burden on lecturers, improves the accuracy of institutional records, and deters attendance fraud without expensive specialist hardware. Academically, it contributes to the growing body of research on digital transformation in higher education and offers a replicable reference model for low-cost attendance automation in resource-constrained environments.
+
+1.7  Limitations of the Study
+The following limitations are acknowledged:
+•	The system was validated in a limited academic environment and may require further testing before full institutional deployment.
+•	Time constraints restricted the breadth of user acceptance testing during the project period.
+•	The system depends on a functioning webcam or camera device for scanning operations.
+•	Deployment is currently tied to the configured PostgreSQL database and local Windows environment.
+
+1.8  Research Methodology Overview
+The project adopts the Agile Software Development Methodology, chosen for its support of iterative delivery, continuous stakeholder feedback, and adaptive planning — attributes well-suited to a system that must simultaneously satisfy the needs of students, lecturers, and administrators. Agile's sprint-based structure allowed requirements to be refined progressively as early prototypes were demonstrated to prospective users, ensuring that the final system reflected real institutional workflows rather than assumed ones.
+Each sprint concluded with a review session in which working software was demonstrated to at least one prospective end user, and feedback was incorporated into the backlog for the following sprint. This approach reduced the risk of late-stage requirement mismatches and ensured that design decisions — such as the grace-period mechanism and the duplicate-scan rejection behaviour — were validated by actual lecturers before being finalised.
+Data Collection Methods
+•	Semi-structured interviews with lecturers and students to identify pain points in existing attendance processes.
+•	Observational study of manual attendance workflows during live lectures.
+•	Systematic review of related literature and existing automated attendance systems.
+
+Development Stack
+
+Component	Technology / Tool
+Frontend / Desktop UI	Python Tkinter
+Camera and QR Scanning	OpenCV, pyzbar
+QR Code Generation	qrcode, Pillow
+Backend Logic	Python
+Database	PostgreSQL via psycopg2
+Development IDE	Visual Studio Code
+Version Control	Git
+Deployment OS	Windows
+
+1.9  Key Terms and Definitions
+
+Term	Definition
+QR Code	A two-dimensional barcode capable of encoding hundreds of characters, readable rapidly by a camera with no dedicated hardware.
+Attendance Management System	A software application used to track, record, and manage attendance data electronically.
+Proxy Attendance	The fraudulent practice of one student recording attendance on behalf of an absent peer.
+Authentication	The process of verifying a user's identity before granting system access or recording attendance.
+Timetable Slot	A scheduled lecture period used by the system to determine valid attendance windows.
+Grace Period	A configurable time window after lecture start during which attendance can still be accepted.
+RBAC	Role-Based Access Control — a security model assigning permissions based on user role (lecturer or administrator).
+
+1.10  Organisation of the Report
+The remainder of this report is organised as follows:
+•	Chapter Two reviews existing literature on attendance management, QR code technology, and automated systems deployed in higher education.
+•	Chapter Three presents the system analysis and design, covering requirements, database design, architectural decisions, and system diagrams.
+•	Chapter Four details the implementation process, testing strategy, and system evaluation.
+•	Chapter Five presents conclusions, recommendations, and directions for future work.
+
+
+  CHAPTER TWO  
+Literature Review
+
+
+2.1  Introduction
+This chapter reviews existing literature on attendance management systems in tertiary institutions, the evolution and applications of QR code technology, and a selection of existing automated attendance solutions. The review covers traditional manual approaches, the technological landscape of automated attendance tools, and an in-depth examination of three comparable systems currently deployed in higher education contexts. For each existing system, both strengths and limitations are considered in detail. The review identifies key gaps in the current state of the art and establishes the theoretical foundation for the design decisions taken in Presence Scan.
+
+2.2  Traditional Attendance Systems
+Manual attendance systems have been the dominant mode of tracking student participation for decades. The three most prevalent methods — paper registers, oral roll calls, and circulated signature sheets — are straightforward to implement but carry significant operational disadvantages that have been extensively documented in the academic literature.
+Paper registers and circulated signature sheets are particularly susceptible to falsification. Because they rely solely on a handwritten signature, there is no mechanism to verify that the person signing is actually the enrolled student. A student who is absent can arrange for a classmate to sign on their behalf, and without close visual monitoring of every student as they sign — impractical in large cohort settings — this proxy attendance is effectively undetectable. The problem is not merely theoretical: a survey conducted by Kasim and Ramlan (2021) found that over 60% of students at a Malaysian polytechnic admitted to witnessing proxy attendance, and more than 20% admitted to participating in it directly.
+Oral roll calls, while harder to falsify, introduce a different set of problems. Calling each student's name individually consumes between three and ten minutes of lecture time per session — an interval that scales poorly as class sizes grow (Kasim & Ramlan, 2021). In a course with three scheduled sessions per week over a fifteen-week semester, this equates to between 135 and 450 minutes of teaching time lost per course to attendance administration alone. In modular degree Departments where contact hours are tightly managed, this loss is educationally significant.
+A further limitation of manual methods is the transcription burden they impose. Raw paper records must be manually entered into institutional management systems, adding administrative workload and creating a second opportunity for error. Research by Ohta et al. (2020) found that manual attendance records contained an average transcription error rate of approximately 4% — a figure that, while seemingly small, can materially affect examination eligibility determinations and student progression decisions at scale. An institution processing attendance data for five thousand students across hundreds of courses per semester cannot easily absorb a 4% error rate without systematic auditing processes that themselves consume additional administrative resource.
+Beyond operational inefficiency, manual systems create significant data management challenges. Paper registers are physically vulnerable — they can be lost, damaged, or destroyed, resulting in permanent loss of the records they contain. They are also difficult to query: generating a summary of a student's attendance across multiple courses, or identifying all students below a minimum attendance threshold, requires either manual cross-referencing of multiple physical documents or full transcription before any analysis can begin.
+Despite these well-documented shortcomings, many institutions in low- and middle-income countries continue to rely on manual systems, primarily due to limited ICT infrastructure, budget constraints, and resistance to organisational change. This persistence creates a clear and urgent opportunity for a low-cost digital alternative that does not require significant infrastructure investment or ongoing service subscriptions.
+
+2.3  QR Code Technology
+A QR (Quick Response) code is a two-dimensional matrix barcode developed by Denso Wave in 1994. Unlike one-dimensional barcodes, which encode data in a single horizontal axis, QR codes encode data across both horizontal and vertical axes, allowing them to store hundreds of characters — including alphanumeric strings, URLs, and binary payloads — in a compact, machine-readable format. Modern camera-equipped devices can decode a QR code in under a second, requiring no dedicated scanning hardware beyond the image sensor already present in smartphones, laptops, and desktop webcams.
+The structural design of a QR code contributes significantly to its practical utility in field deployments. Each code incorporates Reed-Solomon error correction, which allows it to remain scannable even when up to 30% of its surface area is damaged, obscured, or soiled — a property that makes QR codes robust under real-world conditions such as worn student ID cards, low-quality printing, or partial obstruction. Four error correction levels are defined in the QR standard: Level L (7% recovery), Level M (15%), Level Q (25%), and Level H (30%), offering a configurable trade-off between data storage capacity and damage tolerance.
+QR codes have achieved exceptionally broad adoption across diverse domains, including payment systems (e.g. WeChat Pay, GhanaQR), product authentication, event ticketing, restaurant menus, and healthcare records management. This ubiquity has made QR decoding a standard feature of device operating systems and camera applications, further reducing the barrier to deployment. For attendance automation specifically, their negligible generation cost, sub-second scan speed, and compatibility with commodity hardware represent a compelling combination.
+A critical distinction for security-sensitive attendance applications is that between static and dynamic QR codes. A static code encodes a fixed, immutable value — such as a student identifier — and remains valid indefinitely. This permanence is operationally convenient but introduces a fraud vector: a student could photograph a peer's QR code and send it electronically to a confederate, who could then scan it from any location during the lecture window. In an era of instant messaging and image sharing, this form of forwarding fraud requires minimal effort and is difficult to detect without additional verification layers.
+A dynamic QR code addresses this vulnerability by encoding a time-limited, session-specific token — a short-lived value generated fresh for each attendance session — that expires automatically after a predefined interval. Any forwarded image of a dynamic code becomes useless once the session closes, rendering remote fraud significantly more difficult (Singh et al., 2022). The trade-off is added system complexity: a token generation and validation service must run continuously, and students must have access to a device capable of displaying the current token at the moment of scanning.
+Presence Scan uses static per-student QR codes, accepting the theoretical forwarding risk in exchange for implementation simplicity and hardware independence. This risk is mitigated at the server side through timetable-slot-level duplicate rejection: because each student's attendance for a given slot can only be recorded once, a forwarded code can at most produce a single fraudulent record — and only if it is scanned before the legitimate student arrives. The design represents a pragmatic balance appropriate to the operational context of many tertiary institutions.
+
+2.4  Automated Attendance Systems — Technology Comparison
+A range of technologies has been applied to automated attendance collection in higher education, each with distinct trade-offs across cost, accuracy, fraud resistance, and the infrastructure required to deploy and maintain the system at scale. The table below summarises the principal alternatives.
+
+Technology	Cost	Accuracy	Fraud Resistance	Infrastructure Needed
+QR Code (Dynamic)	Low	High	Medium–High	Webcam only
+RFID	Medium	High	Medium	RFID readers & tags
+Biometric (Fingerprint)	High	Very High	Very High	Dedicated readers
+NFC	Medium	High	Medium	NFC-enabled devices
+Facial Recognition	High	Very High	Very High	Camera & GPU server
+
+RFID-based systems encode student identifiers on card-embedded chips and read them passively as students pass a reader. While accurate and fast for individual scans, RFID is susceptible to card-sharing fraud (a student can hand their card to another person) and requires the installation of fixed reader hardware at venue entry points — an ongoing capital and maintenance cost. NFC operates on similar principles but requires students to actively tap their device against a reader, introducing a minor additional action per student.
+Biometric systems — fingerprint readers and facial recognition — offer the highest fraud resistance of any current technology, as the authenticating attribute (a fingerprint or facial geometry) cannot be transferred between individuals. However, their capital cost, the specialist hardware they require, and the significant data protection and privacy obligations associated with storing biometric templates make them disproportionate for many institutional contexts, particularly in jurisdictions with developing data-protection regulatory frameworks.
+QR code systems occupy a favourable position in this landscape: they achieve high accuracy at low cost with minimal infrastructure requirements, while server-side controls — timetable validation, grace periods, and duplicate rejection — bring fraud resistance to a practically acceptable level for most tertiary institutions (Onyema et al., 2021).
+
+2.5  Review of Similar Existing Systems
+The following subsections examine three attendance management systems that have been deployed or documented in higher education contexts. Each system is evaluated for its core approach, key strengths, and — with particular attention — the limitations and issues that have been identified through use, published evaluations, or structural analysis. The subsection concludes with a comparative summary and an identification of the research gap that motivates Presence Scan.
+
+2.5.1  SmartTendance
+SmartTendance is a cloud-hosted attendance management platform aimed at universities and colleges. Its core mechanism is dynamic QR code scanning: the system generates a fresh session token at the start of each lecture, displays it on a projector screen or lecturer device, and students scan it using their smartphones to register their presence. An optional facial recognition layer can be activated to verify that the face of the scanning student matches the enrolled photograph on file, adding a second biometric confirmation of identity.
+The platform provides real-time analytics dashboards accessible to both lecturers and administrators, enabling immediate identification of attendance trends, at-risk students, and anomalies within and across courses. Automated alerts can be configured to notify students and academic advisors when attendance falls below a defined threshold. Integration with institutional student information systems (SIS) is also supported, allowing attendance data to flow directly into existing academic management workflows.
+SmartTendance's primary strengths are its strong security posture and its operational depth. The combination of dynamic session tokens and optional facial verification makes proxy attendance exceptionally difficult: a student would need to be physically present with their smartphone at the moment the token is displayed in the lecture hall, and facial recognition adds a further layer that cannot be defeated by card or code sharing. The real-time dashboards give administrators genuinely actionable insight without requiring manual report generation.
+However, SmartTendance has several significant limitations that restrict its suitability for many institutional contexts. First and most critically, the system requires stable internet connectivity for every operation. QR tokens are generated server-side and transmitted in real time; attendance records are submitted and validated via the cloud; dashboards are browser-based. Any interruption in connectivity — whether at the institution's network level or on individual student devices — can prevent attendance from being recorded. In contexts where network infrastructure is unreliable or bandwidth is shared across a large campus population, this dependency creates a systemic operational risk that is difficult to mitigate.
+Second, SmartTendance's cloud infrastructure model entails ongoing subscription costs that may be prohibitive for smaller or under-resourced institutions. Unlike a locally deployed system that incurs primarily one-time setup costs, cloud-based attendance platforms typically charge on a per-user or per-institution basis, creating a recurring financial commitment. For institutions in low- and middle-income countries, these costs can represent a significant barrier to adoption.
+Third, cloud hosting raises data sovereignty and privacy concerns that are increasingly salient under modern data protection frameworks. Student attendance records are sensitive personal data; their storage and processing by a third-party cloud provider introduces questions about jurisdiction, data access, and the handling of breaches that may conflict with institutional data governance policies or national regulations. Institutions that are required by law or policy to keep student data within a specific geographic region may not be able to use a cloud-hosted system without contractual guarantees that are not always straightforward to obtain.
+Fourth, the requirement that all students carry smartphones capable of scanning QR codes represents a hardware dependency on the student side. While smartphone penetration is high in many populations, it is not universal, and assuming all students have suitable devices introduces an equity issue: students without smartphones — who may disproportionately come from lower-income backgrounds — are disadvantaged by the system's core mechanism.
+
+2.5.2  Attenqo
+Attenqo takes a layered approach to attendance verification, combining QR code scanning with GPS location verification and compulsory selfie capture. When a student scans the session QR code, the application simultaneously records their GPS coordinates and captures a photograph of their face using the front-facing camera. All three data points — QR code validity, physical location, and facial image — are validated before attendance is accepted. The intention is to make remote or proxy attendance practically impossible, since defeating the system would require simultaneously spoofing GPS coordinates, presenting a valid QR code, and producing a matching photograph.
+This multi-layer approach gives Attenqo a strong theoretical fraud resistance profile. GPS verification prevents students from scanning QR codes while physically outside the lecture venue, addressing the most common form of remote attendance fraud. The selfie requirement further complicates proxy attendance, as a student would need to supply not only another person's QR code but also a real-time photograph of that person's face — a requirement that is logistically very difficult to satisfy remotely.
+Despite these security advantages, Attenqo has attracted significant criticism in its deployment evaluations, and its limitations are numerous and practically significant. The most fundamental is its hardware dependency: the system requires that every student possess a smartphone with GPS, a front-facing camera, and an active mobile data connection. In student populations where device ownership is heterogeneous — particularly in developing country contexts or among mature and part-time students — this assumption cannot be safely made. Students without qualifying devices are effectively unable to participate in the system's attendance mechanism, creating an immediate equity and inclusion problem.
+GPS accuracy introduces a further technical limitation. GPS signals are notoriously unreliable inside buildings — particularly in large concrete lecture theatres — where signal attenuation and multipath reflections can produce location estimates that are tens or hundreds of metres from the device's true position. Attenqo's geofencing logic must therefore be calibrated with wide tolerances to avoid incorrectly rejecting legitimate attendance submissions from students inside the target venue. These wide tolerances in turn reduce the system's ability to distinguish students who are genuinely inside the room from those who are nearby but not present, partially undermining the location verification's fraud-resistance value.
+The selfie requirement has generated privacy objections from students and institutions alike. Collecting real-time facial photographs of students at every attendance event produces a substantial ongoing store of biometric-adjacent data. This data must be stored, secured, and eventually deleted in accordance with data protection legislation — obligations that add compliance complexity and cost. Students who object to routine biometric data collection on privacy grounds face a difficult choice between complying with a system they find intrusive or risking attendance records that are incomplete or disputed.
+User experience evaluations of Attenqo have consistently highlighted the interface's complexity as a barrier at the moment of session start. Requiring students to open an application, scan a code, wait for GPS lock, and complete a selfie capture introduces a multi-step flow that, under time pressure at the beginning of a lecture, generates queuing and confusion — particularly among students unfamiliar with the application or those whose devices are slow. Lecturers have reported that the time saved by not conducting manual roll calls is partially offset by the time required to manage student difficulties with the application interface.
+Finally, Attenqo's continuous GPS polling and camera activation impose a non-trivial battery drain on student devices. Students attending multiple sessions in a single day may find their devices significantly depleted by the accumulated overhead, which has led to some students disabling the application between sessions and then failing to re-enable it in time — resulting in missed attendance records that generate administrative disputes.
+
+2.5.3  UAMS (University Attendance Management System)
+UAMS is a research-oriented attendance management system that employs Bluetooth Low Energy (BLE) proximity detection in combination with geofencing to verify that a student is physically within the lecture venue before their attendance is recorded. Small BLE beacon devices installed in each lecture room broadcast a unique identifier signal; students' smartphones detect this signal through the UAMS mobile application and use it, in conjunction with GPS coordinates, to confirm venue presence. The system also implements an offline synchronisation capability, allowing attendance records captured during periods without internet connectivity to be queued locally on the device and uploaded automatically once a connection is re-established.
+BLE proximity detection is a technically sophisticated attendance verification approach. Unlike GPS — which suffers from severe signal degradation indoors — BLE signals are transmitted at short range and are specifically intended for indoor proximity sensing. A correctly calibrated BLE beacon can reliably detect devices within a specific room while excluding devices in adjacent rooms or corridors, providing a degree of spatial precision that GPS cannot match in enclosed environments. For large institutions with lecture venues in close physical proximity, this precision is operationally important.
+The offline synchronisation feature is UAMS's most significant practical advantage over purely cloud-dependent systems. Because attendance data is held locally on the student device until connectivity is available, sessions can proceed normally even when the campus network is unavailable or overloaded. This resilience is particularly relevant in high-demand periods such as examination season, when institutional networks often experience peak traffic. The queued records are uploaded and reconciled with the central database as soon as connectivity is restored, with conflict resolution logic applied where the same session has been partially recorded through other means.
+Despite these technical merits, UAMS carries a substantial set of limitations that constrain its real-world deployability. The most significant is infrastructure cost. BLE beacons must be physically installed in every lecture venue in which the system is to operate — a requirement that scales directly with the number of rooms an institution manages. Each beacon requires initial procurement, physical installation, periodic battery replacement or power supply management, and eventual replacement as the hardware ages. For institutions with dozens or hundreds of lecture venues, this represents a considerable and ongoing capital expenditure with no close equivalent in software-only or webcam-based systems.
+Beacon calibration is a further operational challenge. BLE signal strength is affected by physical obstructions, interference from other wireless devices, and the layout and materials of the room. A beacon that is correctly calibrated in an empty room may behave differently during a lecture when the room is full of people whose bodies attenuate and reflect the signal. Achieving reliable room-level precision across a diverse estate of venues — old and new buildings, varied room sizes, different furnishing densities — requires an iterative and time-consuming calibration process that must be repeated whenever the physical environment changes.
+On the student side, UAMS shares Attenqo's dependency on student-owned smartphones. The application must be installed and active on each student's device, with Bluetooth enabled and the necessary permissions granted. Bluetooth is frequently disabled by users to conserve battery life or for personal preference, and the UAMS application cannot record attendance if Bluetooth is off. Students who habitually disable Bluetooth may consistently fail to register attendance through no deliberate intent, generating a pattern of disputed records. The application also requires location permissions on both Android and iOS — permissions that operating system security models present with prominent warnings, and which a significant proportion of users decline for privacy reasons.
+UAMS's server-side architecture, while supporting offline sync, still depends on a centralised backend for record consolidation, reporting, and administration. This backend requires ongoing hosting, maintenance, and security management — resources that may not be available to smaller institutions. The research literature documenting UAMS also notes that the system was developed and evaluated in a single institutional context, and that its generalisation to institutions with different network architectures, device management policies, or student demographics remains unvalidated.
+A final concern common to UAMS and several other smartphone-dependent systems is digital equity. The implicit assumption that every student owns a personal smartphone capable of running the application, with Bluetooth and GPS functional, and with sufficient storage and battery capacity for a full day of academic activities, does not hold uniformly across student populations. Students from lower-income backgrounds, older students returning to education, and international students using basic or feature-phone devices may all be excluded from participation in a smartphone-dependent attendance system — a significant inclusion issue in the context of widening participation agendas in higher education.
+
+2.5.4  Comparative Summary and Research Gap
+The three systems reviewed above illustrate the range of technical approaches currently applied to automated attendance management in higher education. Each makes meaningful contributions to the field: SmartTendance demonstrates the potential of cloud analytics and layered verification; Attenqo shows how multi-modal confirmation can substantially raise the barrier to proxy attendance; and UAMS establishes the value of offline resilience and indoor-accurate proximity detection.
+However, taken together, the reviewed systems share a common set of structural limitations that collectively define a research gap this study aims to address.
+
+System	Key Strengths	Key Limitations
+SmartTendance	Dynamic QR + facial recognition; real-time dashboards; strong fraud resistance.	Requires stable internet at all times; expensive cloud infrastructure; data sovereignty concerns; high subscription cost.
+Attenqo	Multi-layer verification (QR + GPS + selfie); strong physical presence confirmation.	Smartphone dependency; GPS spoofing risk; interface complexity; high data consumption; privacy concerns with selfie capture.
+UAMS	BLE proximity detection; offline sync capability; geofencing accuracy.	BLE beacon hardware cost per venue; complex mobile permissions; high maintenance overhead; single-platform dependency.
+Presence Scan (Proposed)	Local deployment; no internet dependency; webcam-based scanning; timetable validation; low cost.	Static QR codes less fraud-resistant than dynamic tokens; webcam lighting sensitivity; no mobile companion.
+
+The first and most pervasive limitation is the dependency on student-owned smartphones. All three systems require students to install and actively use a mobile application, placing a hardware and software burden on the student side that cannot be universally guaranteed. Systems in which the attendance recording mechanism is controlled entirely by institutional staff — rather than distributed across potentially hundreds of heterogeneous student devices — are inherently more reliable and equitable.
+The second structural limitation is network dependency. SmartTendance and Attenqo both require active internet connectivity for core operations; UAMS mitigates this through offline sync but still requires a functioning backend for data management. A system that operates entirely locally, with no external network requirement for day-to-day attendance recording, is more resilient and appropriate for institutions with limited or inconsistent connectivity.
+The third limitation is infrastructure cost. SmartTendance's cloud subscription, Attenqo's per-seat mobile licensing, and UAMS's BLE beacon installation all introduce recurring or one-time costs that may be prohibitive for smaller or less well-resourced institutions. A system deployable on hardware the institution already owns — a desktop computer and a webcam — with open-source or low-cost software components occupies a substantially more accessible cost point.
+Finally, none of the reviewed systems is purpose-designed for staff-managed, lecturer-controlled desktop-based scanning. They are all student-facing applications in which the student is an active participant in the attendance recording process. This design choice introduces dependencies on student device availability, student willingness to install and maintain the application, and student compliance with the process — all of which can fail independently of institutional intent.
+Presence Scan is designed to address this gap directly. By placing a webcam-based scanner under the lecturer's control on a standard desktop machine, and by operating against a local PostgreSQL database that requires no external connectivity, the system eliminates student device dependencies and network requirements simultaneously. Timetable validation and duplicate-entry rejection provide fraud resistance appropriate to the institutional context without requiring the privacy-sensitive data collection of biometric systems. The following chapters detail the design and implementation of this approach.
+
+
+  CHAPTER THREE  
+System Analysis and Design
+
+
+3.1  Development Methodology
+The Agile Software Development Methodology was adopted for this project. Agile supports incremental delivery through short development cycles (sprints), continuous stakeholder feedback, and the flexibility to adapt to evolving requirements — attributes particularly valuable when building a system that must satisfy the diverse needs of students, lecturers, and administrators simultaneously.
+Agile was preferred over traditional waterfall-based methodologies for several practical reasons. First, the requirements for an attendance system of this type are partially emergent: edge cases such as the behaviour when a lecturer scans outside a timetable window, or the exact form of report output expected by administrators, are most reliably defined through feedback on working software rather than upfront specification. Second, the project timeline was fixed, and Agile's iterative structure ensured that a working, testable core system was available well before the final deadline, leaving time for refinement and evaluation. Third, involving real lecturers and administrators in sprint reviews produced requirement insights — such as the importance of a clear on-screen rejection message when a duplicate scan is detected — that would not have surfaced through interviews alone.
+The project was structured into four two-week sprints: (1) requirements gathering and system design; (2) user authentication and QR code generation; (3) QR scanning, attendance recording, and reporting; and (4) testing, evaluation, and documentation.
+
+3.2  Requirements Analysis
+3.2.1  Functional Requirements
+
+ID	Requirement	Priority
+FR-01	The system shall allow administrators and lecturers to authenticate securely.	Must Have
+FR-02	The system shall allow administrators to register and manage students, courses, lecturers, and timetable entries.	Must Have
+FR-03	The system shall generate a unique QR code for each registered student.	Must Have
+FR-04	Lecturers shall be able to scan student QR codes using a webcam-based interface to record attendance.	Must Have
+FR-05	The system shall reject duplicate attendance submissions within the same timetable slot.	Must Have
+FR-06	The system shall validate attendance only when the course is active on the timetable.	Must Have
+FR-07	Lecturers shall be able to view attendance records for their assigned courses.	Must Have
+FR-08	Administrators shall access institution-wide attendance analytics and reports.	Should Have
+FR-09	The system shall support CSV export of attendance data.	Could Have
+
+Functional requirements in detail:
+- Authentication shall support distinct lecturer, administrator, and developer entry points.
+- Login shall create a session context so later actions can be validated against the active user role and department.
+- QR generation shall create one unique code per student and save it for printing and reuse.
+- Scanning shall validate the QR payload against the student record before any attendance is stored.
+- Attendance shall only be accepted when the lecturer is assigned to the course and the scan occurs within the active timetable window or grace period.
+- Duplicate scans for the same student and timetable slot shall be rejected at application and database level.
+- Administrators shall be able to manage semesters, export CSV templates, and view audit logs.
+- The developer entry point shall allow university and department setup before normal user access.
+- Import and export workflows shall give immediate feedback when records fail validation.
+- Reports shall support per-course, per-student, and semester-based review.
+
+3.2.2  Non-Functional Requirements
+
+ID	Requirement	Category
+NFR-01	The system shall respond to QR scan and attendance recording requests within 2 seconds under normal load.	Performance
+NFR-02	All user passwords shall be stored as salted cryptographic hashes (bcrypt or equivalent).	Security
+NFR-03	Attendance scans shall be validated against registered student records and timetable rules.	Security
+NFR-04	The system shall support concurrent use by administrative staff without performance degradation.	Scalability
+NFR-05	The user interface shall be operable on standard Windows desktop environments.	Usability
+NFR-06	The system shall maintain stable operation during all scheduled lecture hours.	Reliability
+
+Non-functional requirements in detail:
+- Performance: live scanning must remain responsive enough for lecture use without delaying the queue.
+- Security: passwords, admin PINs, and developer credentials must be hashed; access must be role-aware.
+- Reliability: the application should continue operating during a full lecture session even if the camera briefly loses frame quality.
+- Usability: the UI should keep important actions visible and reduce the number of clicks required for common tasks.
+- Maintainability: logic should remain separated across modules so scanning, settings, and reporting can evolve independently.
+- Portability: the application should run in a typical Windows desktop environment with a local PostgreSQL server.
+- Data integrity: database constraints must prevent invalid, duplicate, or cross-semester attendance records.
+
+3.3  System Architecture
+Presence Scan follows a desktop client architecture built with Python Tkinter and a PostgreSQL database layer. The user interface, business logic, and database operations are implemented in modular Python files to promote maintainability and extensibility. This separation of concerns means that individual modules — for example, the scanning engine or the reporting layer — can be updated or replaced without cascading changes across the entire codebase.
+The current deployment model is per university: each institution uses its own PostgreSQL database while sharing the same schema. This avoids cross-institution data conflicts and allows a university to keep its lecturers, departments, students, and attendance records isolated from other deployments.
+The choice of a local PostgreSQL database rather than a cloud-hosted data store was deliberate. It eliminates the latency and reliability risks associated with network-dependent data access, ensures that attendance sessions can proceed uninterrupted regardless of internet connectivity, and gives institutions direct control over their student data without dependency on third-party service providers.
+Three primary application areas interact with the system:
+•	Login Screen — allows administrators and lecturers to authenticate and initialise a session.
+•	Lecturer Dashboard — provides access to QR scanning, attendance reports, student management, and settings.
+•	Admin Dashboard — provides institution-wide analytics, course management, lecturer management, reports, and settings.
+The scanner module uses OpenCV to capture live camera frames, pyzbar to decode QR codes, and the database layer to validate students, courses, and timetable entries before attendance is committed. The validation pipeline is intentionally sequential: a scan that fails any check — unrecognised student, wrong course, outside time window, or duplicate — is rejected at the earliest failing stage, minimising unnecessary database operations and providing clear, specific feedback to the scanning lecturer.
+
+3.4  Database Design
+The database is normalised to third normal form (3NF) and organised around the following primary entities. Normalisation ensures that data redundancy is minimised, updates propagate correctly, and the schema can accommodate future extensions — such as additional institution types or new reporting dimensions — without structural redesign. The current schema is intended to run one database per university.
+
+Entity	Description
+Universities	Stores university records for developer setup and deployment isolation.
+Departments	Stores departmental records linked to universities.
+Semesters	Stores academic sessions (active/closed) used to isolate historical and current operations.
+HODs	Stores Head of Department accounts used for administrator access.
+Lecturers	Stores lecturer accounts, names, department associations, and roles.
+Students	Stores student identifiers, names, department details, and QR code values.
+Courses	Stores course codes, titles, department links, lecturer assignments, credit hours, and grace-period settings.
+Course Registrations	Links students to the courses in which they are enrolled for a specific semester.
+Timetable	Stores day-of-week and time-slot data for each course.
+Attendance	Stores per-session attendance records, scoped to semester for accurate rollover history.
+Audit Log	Stores administrative actions such as semester rollover, registration copy, and security changes.
+
+Referential integrity is enforced throughout via foreign key constraints. For example, an attendance record cannot reference a timetable slot or student that does not exist in the corresponding tables, ensuring that orphaned records cannot accumulate through partial data entry. The attendance table applies a unique composite constraint on the timetable slot and student identifier, preventing duplicate entries at the database level and providing a second layer of protection independent of application-side validation.
+The grace_minutes field on the Courses entity is stored at the course level rather than the timetable level, reflecting the practical reality that different courses may have different policies — a large lecture with hundreds of students may require a longer grace period than a small seminar group. Administrators can configure this value per course through the admin dashboard without requiring any database changes.
+
+3.5  Input and Output Design
+System Inputs
+•	Student registration details — student ID, full name, department, year of study, and optional email or contact fields.
+•	Lecturer credentials and course assignments.
+•	Course details, timetable entries, semester selection, and configurable grace-period durations.
+•	Admin PIN input for semester rollover and other protected actions.
+•	Developer password input for institution setup.
+•	QR scan data captured from student identity cards via the webcam feed.
+•	CSV import files for students, courses, and registrations.
+
+Input design notes:
+- The login screen accepts a user ID, password, and role context.
+- The settings window accepts theme selection, grace period, export path, semester weeks, and admin PIN values.
+- The import center accepts CSV files and displays validation feedback directly in the dialog.
+- The QR scanner accepts camera frames continuously and processes only QR symbology.
+•	Semester management inputs include the next semester name and the admin PIN confirmation for rollover.
+System Outputs
+•	Per-course attendance lists, filterable by date, timetable slot, and semester.
+•	Attendance summary reports for lecturers and administrators.
+•	Attendance statistics and trend summaries on the admin dashboard.
+•	Exportable CSV attendance files for offline analysis or institutional reporting.
+•	Audit log entries showing sensitive administrative actions.
+•	Success, warning, and error messages during QR scanning, import, and semester rollover.
+
+Output design notes:
+- Report tables should present student identifiers, names, course codes, scan time, and attendance status.
+- The dashboard should highlight current semester state, active settings, and low-attendance indicators.
+- Rejection messages should explain why a scan failed, such as duplicate scan, wrong course, or inactive timetable slot.
+- Exported CSV files should be suitable for spreadsheet review and archiving without additional formatting.
+
+3.6  System Diagrams
+The following diagrams are included to fully specify the system design:
+
+3.6.1  Use Case Diagram
+The use case diagram presents the major actors and the actions they can perform in the system. The primary actors are the lecturer, administrator, developer, and student. The lecturer actor can log in, open the scanner, record attendance, and view course-specific attendance records. The administrator actor can manage students, courses, lecturers, semesters, settings, imports, exports, reports, archives, and audit logs. The developer actor can initialise a university, departments, and institution-level configuration. The student actor is represented indirectly through QR code generation and scanning, since students do not interact with the desktop interface during attendance capture.
+
+3.6.2  System Flowchart
+The system flowchart shows the end-to-end workflow of the desktop application from launch to attendance recording and reporting. The process begins with application start-up and user authentication. After login, the system checks the user's role and opens the appropriate dashboard. If the lecturer selects the scanner, the camera is activated and QR frames are decoded. The decoded QR value is checked against the student register, the active timetable, the assigned lecturer, and the allowed grace period. If validation succeeds, attendance is stored and a success message is displayed. If validation fails, the scan is rejected and the reason is shown to the user. The flowchart also shows the reporting and export branches used by lecturers and administrators.
+
+3.6.3  Sequence Diagram
+The sequence diagram describes the interaction between the main modules during a QR scan event. First, the lecturer opens the scanner window. The scanner module requests frames from the webcam and passes them to the QR decoder. When a QR value is detected, the scanner sends the value to the attendance service, which checks the student record, timetable slot, lecturer assignment, and duplicate status. If all checks pass, the attendance service writes a new attendance record to the database and returns a success response. The scanner then updates the interface with a confirmation message. If any check fails, the database write is skipped and a rejection message is returned instead.
+
+3.6.4  Entity-Relationship (ER) Diagram
+The ER diagram defines how the core data entities relate to one another. University records are linked to departments. Departments are linked to lecturers, courses, and students. A semester contains many course registrations, timetable entries, and attendance records. Each course is assigned to a department and may be linked to a lecturer. Students are registered to courses through course registration records, and each attendance record links a student, course, timetable slot, and semester. The audit log stores administrative actions independently so that security and maintenance events can be reviewed later. The ER structure ensures that attendance is recorded within the correct academic and departmental context.
+
+3.6.5  Component / Module Diagram
+The component diagram presents the desktop application as a set of cooperating modules. The user interface layer contains the login screen, lecturer dashboard, admin dashboard, settings window, import center, and semester archive. The service layer contains authentication, export, and QR scanning logic. The database layer contains modules for students, lecturers, courses, semesters, attendance, departments, and audit logs. Supporting utilities handle session state, password hashing, theme application, and file export. This diagram demonstrates the project's separation of concerns and explains how individual modules can be maintained independently.
+
+3.6.6  Deployment / Architecture Diagram
+The deployment diagram shows the system as a single desktop client connected to a local PostgreSQL server. The application runs on a Windows workstation with a webcam attached for scanning. The desktop UI communicates with the service modules, which in turn read from and write to the local database. CSV import and export operations interact with the filesystem, while QR code generation stores image files in the project folders. This architecture reflects the current stage of the project, which is designed for local institutional deployment rather than cloud hosting.
+
+(Insert the actual figures for these diagrams in the final submission.)
+
+3.7  Hardware and Software Requirements
+
+Category	Requirement
+Operating System	Windows 10 or later
+Programming Language	Python 3.x
+Desktop UI	Tkinter
+Camera & QR Libraries	OpenCV, pyzbar, qrcode, Pillow
+Database	PostgreSQL 15+
+Development IDE	Visual Studio Code
+Version Control	Git / GitHub
+Hardware: Computer	Desktop or laptop capable of running Python and PostgreSQL
+Hardware: Camera	Webcam or built-in camera for QR scanning
+Hardware: Printer	Optional — for distributing QR codes as hard copies
+
+
+
+  CHAPTER FOUR  
+Implementation and Evaluation
+
+
+4.1  System Implementation
+Implementation followed the sprint plan outlined in Chapter Three. Each module was developed, unit-tested, and integrated incrementally before the project advanced to the subsequent sprint. The current build includes authentication, QR generation, webcam scanning, attendance recording, reporting, semester management, audit logging, and developer institution setup.
+
+4.1.1  User Authentication Module
+The authentication module implements a secure login workflow for administrators and lecturers, with a separate developer password for institution setup. Credentials are validated against the HOD and lecturer tables through the shared authentication service. On successful authentication, the active user's role and identifier are stored in a session object that governs subsequent access control decisions throughout the application lifetime.
+
+Password handling is role-aware and hashed. Existing plaintext credentials are migrated to hashed form where legacy data is encountered, so older records remain usable while still being secured. The same pattern is used for the admin PIN stored in settings, which protects semester rollover and other sensitive admin actions.
+
+The login UI is the first gate in the application. It establishes the user context used by settings, dashboards, reporting, and department-aware record creation. This makes role enforcement consistent across the application instead of relying on individual screens to re-check permissions independently.
+
+4.1.2  Student QR Code Generation Module
+The QR generation module creates a unique QR code image for each registered student's identifier and stores the generated files in the project's designated QR code directory. Codes are designed for print distribution: administrators can generate individual or batch QR cards for physical issue to students.
+
+The current implementation keeps QR generation intentionally simple and stable: the student ID is encoded as the QR payload, the resulting PNG is written to the canonical QR folder, and the image is mirrored to the legacy assets folder for compatibility with older display utilities. If a QR code already exists for a student, the generator reuses it rather than creating duplicates.
+
+This design supports the current stage of the project, where the emphasis is on reliable scanning and attendance capture rather than dynamic session tokens. It also keeps the QR workflow easy for administrators to deploy and reprint when needed.
+
+4.1.3  QR Code Scanning Module
+The scanning module opens a live webcam feed through OpenCV and continuously decodes incoming QR codes using pyzbar. The current decoder path is restricted to QR symbols only to avoid false decoding behaviour from other barcode formats. On detection, the system validates the decoded value against the student table, verifies that the currently authenticated lecturer is assigned to the active course, checks that the scan falls within the timetable window plus grace period, and proceeds to record attendance if all conditions are satisfied.
+
+The scan workflow is intentionally defensive. Any decode error, unrecognised student, invalid timetable state, or duplicate attempt is rejected before attendance is committed. This keeps the lecturer informed with clear feedback and reduces the chance of invalid rows reaching the database layer.
+
+The module is designed for lecturer-controlled scanning rather than student-controlled scanning. That choice aligns with the current desktop deployment model and reduces dependence on student devices, mobile permissions, and external connectivity.
+
+4.1.4  Attendance Recording and Reporting Module
+Valid attendance submissions are committed to the attendance table with the relevant timetable slot reference. The reporting module aggregates these records to produce per-course attendance lists and dashboard summaries. Duplicate-entry prevention is enforced at the database level via a unique constraint, providing a second layer of protection beyond the application-level check. Administrators can export attendance data to CSV for offline analysis or institutional reporting.
+
+The reporting layer currently supports the operational needs of the project stage: course attendance views, summary counts, and exportable CSV output. Because attendance is semester-scoped, the same reporting structure can separate active and historical records without deleting earlier data. This is important for transcript-style review, semester archive browsing, and auditability.
+
+The module also supports the evaluation goals of the project by making attendance results easy to inspect, compare, and verify against timetable slots. That makes it possible to justify the system's effectiveness using real records rather than manual estimates alone.
+
+4.1.5  Administrative Data Management
+The current version of the application uses a per-university deployment model. University, department, lecturer, course, and student records are managed inside one institution-specific PostgreSQL database rather than across shared tenants. The developer entry point is used to create and manage the institution structure before normal users sign in.
+
+Lecturer management supports creating a new lecturer account, updating an existing lecturer's profile details, and resetting the lecturer's password. Passwords are hashed before storage in both lecturer and HOD tables, and the reset flow updates the hash rather than storing plaintext values.
+
+Administrative setup is currently one of the strongest parts of the application stage because it ties the institution structure together. The developer UI seeds the university and departments; the admin and HOD records then inherit that structure; course creation and lecturer assignment remain department-aware; and the session context ensures that admins only manage data within their own institutional scope.
+
+The current Settings window includes theme controls, attendance grace-period settings, export folder configuration, admin PIN management, semester rollover, semester archive access, audit log viewing, and re-registration of the latest closed semester.
+
+This settings area also acts as the control center for the current stage of the project. It allows the administrator to adjust the visual theme, control attendance grace periods, define semester duration, configure automatic dashboard refresh, and manage archive or rollover operations without leaving the desktop app.
+
+The CSV import workflow for students, courses, and registrations now shows failures directly in the Import Center dialog instead of writing separate `.failures.txt` sidecar files to disk. This keeps the import process simpler while still showing validation issues clearly to the user.
+
+The admin dashboard date navigation has also been refined. Moving between days now depends on timetable and special-day rules rather than the latest attendance record, so the interface can navigate through scheduled lecture days without being blocked by old attendance history.
+
+4.2  Testing Strategy
+A four-level testing strategy is being employed to ensure system correctness, integration integrity, and usability:
+
+Test Level	Scope	Outcome Measure
+Unit Testing	Individual functions: authentication, QR generation, duplicate detection, timetable lookup.	All functions pass defined assertions.
+Integration Testing	Cross-module interaction: login, scanning, recording, and reporting.	Data flows correctly across module boundaries.
+System Testing	End-to-end workflow under simulated lecture conditions.	Workflow completes without errors.
+User Acceptance Testing	Usability evaluation with lecturers and administrators.	Participants complete key tasks without assistance.
+
+In the current stage, smoke testing and manual functional checks are the main verification activities. These focus on login, QR generation, camera decoding, attendance submission, semester management, and export/import flows.
+
+4.3  Test Cases and Results
+The following cases describe the current verification scenarios used during development. Where formal UAT has not yet been completed, the expected result is used as the acceptance target for the current build.
+
+Test Scenario	Input Condition	Expected Result
+Valid QR scan	Registered student scanned during active timetable slot.	Attendance recorded successfully.
+Unknown QR code	Unrecognised QR code presented to scanner.	Request rejected; no record created.
+Duplicate submission	Same student scanned twice for the same slot.	Second submission rejected; first record preserved.
+Wrong lecturer / course	Lecturer scans attendance for a course not assigned to them.	Request rejected with appropriate error.
+Inactive timetable session	Scan attempted outside the active timetable window.	Attendance not recorded; out-of-window message displayed.
+Hashed login verification	Existing lecturer or HOD logs in with a valid password.	Login succeeds and stored plaintext credentials are migrated to hashed form where needed.
+Department-bound record creation	Administrator creates a lecturer or course from within their own department.	New record is stored against the administrator's department.
+Forward date navigation	Dashboard arrow is used to move to a later class day.	The next timetable-based class day is shown without being blocked by attendance history.
+
+4.4  Evaluation
+System evaluation is currently preliminary and is based on implementation verification rather than a completed institutional deployment study. The main observations from the current stage are:
+•	Accuracy — the system correctly identifies registered students, rejects unknown QR codes, blocks duplicate submissions, and prevents attendance outside the valid timetable window.
+•	Speed — QR-based recording is substantially faster than manual roll-call methods because scanning and validation happen in one workflow.
+•	Security — role-based access control, password hashing, admin PIN protection, and timetable validation collectively reduce unauthorised access and proxy attendance.
+•	Usability — the current desktop interface supports direct lecturer-administered scanning, export, semester management, and import workflows without requiring student-side software.
+
+Formal user acceptance testing and long-running institutional evaluation remain part of the next development stage.
+
+
+  CHAPTER FIVE  
+Conclusion and Future Work
+
+
+5.1  Summary
+This project has produced a working desktop QR code-based attendance management system for tertiary institutions. The current build includes student QR generation, webcam-based scanning, timetable validation, role-based access control, semester management, audit logging, and administrator tools for import/export and archive handling. The system directly addresses the main weaknesses of manual attendance by reducing recording time, improving traceability, and limiting duplicate or out-of-window submissions.
+
+5.2  Recommendations
+Based on the findings of this study, the following recommendations are made:
+•	Tertiary institutions should prioritise the adoption of automated attendance systems to reduce administrative burden and improve record integrity.
+•	Attendance systems should incorporate clear validation rules to prevent duplicate submissions and guard against unauthorised access.
+•	Staff training and targeted student communication should accompany any system rollout to maximise adoption and minimise disruption during the transition period.
+•	Institutions should keep one database per university deployment to preserve data isolation and simplify administration.
+•	Future releases should extend the system with offline synchronisation and richer analytics to enhance operational resilience and insight.
+
+5.3  Future Work
+Several enhancements are identified for future development iterations:
+•	Offline Synchronisation — enabling attendance data captured without a live database connection to synchronise automatically when connectivity is restored.
+•	Student Self-Service Portal — a student-facing portal allowing students to review their own attendance records and receive automated alerts when approaching minimum attendance thresholds.
+•	Advanced Analytics — expanding the admin dashboard to include trend analysis, early-warning attendance alerts, and exportable visualisations for institutional reporting.
+•	Mobile Companion App — a companion mobile application enabling QR display and record review, making the system more accessible to students.
+•	Dynamic QR Codes — implementing session-specific, time-limited QR tokens as an additional anti-fraud layer.
+•	Automated backups and deployment scripts — to simplify installation for new universities.
+
+5.4  Conclusion
+The Presence Scan project demonstrates that secure, efficient, and cost-effective attendance automation is achievable in tertiary institutions using widely available commodity hardware. The current stage already provides the core workflow needed for operational use, while formal institutional testing and final refinements remain ahead.
+Presence Scan represents a practical step forward from manual methods and from more resource-intensive digital solutions reviewed in the literature. It provides a solid, extensible foundation for the future enhancements identified above and offers a replicable model for institutions seeking to modernise attendance management within realistic budget and infrastructure constraints.
+
+The conclusion is justified by the current implementation evidence: the application already supports authenticated access, QR generation and scanning, timetable-aware attendance recording, duplicate rejection, semester control, and per-university administrative setup. These implemented features directly address the project aim of reducing manual burden and improving attendance integrity. The remaining work is mainly evaluative and enhancement-focused rather than foundational, which shows that the project has progressed beyond concept into a functioning prototype.
+
+
+References
+
+
+Kasim, N. H. A., & Ramlan, S. F. (2021). Automated student attendance system using QR code and mobile application. International Journal of Advanced Computer Science and Applications, 12(6), 112–119.
+Ohta, T., Suzuki, T., & Kawaguchi, N. (2020). Analysis of error rates in manual lecture attendance recording systems. Journal of Educational Administration and Policy, 8(2), 34–47.
+Onyema, E. M., Nwafor, C. E., & Obafemi, F. A. (2021). Benefits of mobile technologies in digital transformation of educational systems: A review. International Journal of Education and Management Engineering, 11(2), 34–46.
+Singh, A., Kumar, V., & Sharma, R. (2022). Dynamic QR code-based attendance management system with anti-fraud mechanisms. International Journal of Computer Applications, 184(5), 22–28.
+
+
+Appendices
+
+
+Appendix A: Source Code
+Key source code listings are included below, or may be accessed via the current project repository snapshot.
+
+Appendix B: Interview Questions
+Questions for Lecturers
+•	How much lecture time do you currently spend recording attendance each session?
+•	Have you encountered instances of proxy attendance? How were they identified and handled?
+•	What features would you consider most important in a digital attendance system?
+•	What concerns, if any, would you have about adopting a QR-based attendance system?
+
+Questions for Students
+•	How is your attendance currently recorded across your courses?
+•	Have you ever witnessed proxy attendance? What were the circumstances?
+•	How comfortable are you with using a QR code for attendance verification?
+•	What would make a digital attendance system easier or more acceptable for you to use?
+
+Appendix C: User Acceptance Testing Survey
+Participants should rate the following statements on a scale of 1 (Strongly Disagree) to 5 (Strongly Agree). This appendix is ready for current-stage UAT when the survey is administered:
+
+Statement	Rating (1 = Strongly Disagree, 5 = Strongly Agree)
+The system was easy to use.	1–5
+I was able to complete the attendance process without assistance.	1–5
+The system responded quickly to my actions.	1–5
+I would prefer this system over the current manual method.	1–5
+I feel confident that the system records my attendance accurately.	1–5
+
