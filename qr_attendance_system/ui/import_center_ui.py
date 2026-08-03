@@ -30,7 +30,7 @@ class ImportCenterUI:
         self.root.configure(bg=bg)
 
         self._bg_label = apply_background_image(self.root, (520, 520))
-        self._logo_image = get_logo_image((72, 72))
+        self._logo_image = get_logo_image((72, 72), master=self.root)
         if self._logo_image is not None:
             tk.Label(self.root, image=self._logo_image, bg=bg, borderwidth=0).pack(pady=(10, 0))
 

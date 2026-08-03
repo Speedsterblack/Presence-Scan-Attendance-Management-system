@@ -1,4 +1,5 @@
 import tkinter as tk
+from typing import Any, cast
 from tkinter import messagebox
 from ui.student_ui import StudentUI
 from ui.course_ui import CourseUI
@@ -11,6 +12,7 @@ from config import settings as app_settings
 from ui.assets_utils import get_logo_image, apply_background_image
 from ui import styles as ui_styles
 from services.mobile_scanner import start_mobile_scanner_server, get_local_ip
+from PIL import ImageTk
 
 _THEME = app_settings.get_theme()
 BG_COLOR = _THEME["bg_color"]
@@ -32,16 +34,23 @@ class DashboardUI:
         self.main_frame.pack(expand=True)
 
         # Window icon and header logo
-        self._icon_image = get_logo_image((64, 64))
+        self._icon_image = get_logo_image((64, 64), master=self.root)
         if self._icon_image is not None:
             try:
                 self.root.iconphoto(False, self._icon_image)
             except Exception:
                 pass
 
-        self._logo_image = get_logo_image((80, 80))
+        self._logo_image = get_logo_image((80, 80), master=self.root)
         if self._logo_image is not None:
-            tk.Label(self.main_frame, image=self._logo_image, bg=BG_COLOR, borderwidth=0).pack(pady=(10, 0))
+            logo_label = tk.Label(
+                self.main_frame,
+                image=_as_tk_image(self._logo_image),
+                bg=BG_COLOR,
+                borderwidth=0
+            )
+            setattr(logo_label, "_image_ref", self._logo_image)
+            logo_label.pack(pady=(10, 0))
 
         tk.Label(
             self.main_frame,
@@ -232,11 +241,10 @@ class DashboardUI:
             qr = qrcode.QRCode(version=1, box_size=10, border=5)
             qr.add_data(url)
             qr.make(fit=True)
-            pil_image = qr.make_image(fill_color="black", back_color="white")
-            
-            # Convert PIL image to PhotoImage
-            from PIL import ImageTk
-            photo = ImageTk.PhotoImage(pil_image)
+            pil_image = qr.make_image(fill_color="black", back_color="white").get_image()
+
+            # Bind the QR image to this dialog's Tk interpreter
+            photo: Any = ImageTk.PhotoImage(pil_image, master=self.root)
             
             # Create dialog window
             dialog = tk.Toplevel(self.root)
@@ -245,14 +253,14 @@ class DashboardUI:
             dialog.lift()
             dialog.focus()
             dialog.attributes('-topmost', True)
-            
+
             tk.Label(
                 dialog,
                 text="Scan with your phone camera",
                 font=("Arial", 14, "bold"),
                 bg="white"
             ).pack(pady=10)
-            
+
             tk.Label(
                 dialog,
                 text=f"Course: {course_code}",
@@ -260,7 +268,7 @@ class DashboardUI:
                 bg="white",
                 fg="#1e90ff"
             ).pack(pady=5)
-            
+
             tk.Label(
                 dialog,
                 text=f"Or visit: {url}",
@@ -268,11 +276,11 @@ class DashboardUI:
                 bg="white",
                 fg="#666"
             ).pack(pady=5)
-            
-            qr_label = tk.Label(dialog, image=photo, bg="white")
-            dialog._qr_photo = photo  # type: ignore # Keep a reference on dialog to prevent garbage collection
+
+            qr_label = tk.Label(dialog, image=_as_tk_image(photo), bg="white")
+            setattr(dialog, "_qr_photo", photo)
             qr_label.pack(pady=20)
-            
+
             tk.Label(
                 dialog,
                 text="Mobile scanner is now active.\nClose this window to stop.",
@@ -281,17 +289,17 @@ class DashboardUI:
                 fg="#999",
                 justify="center"
             ).pack(pady=10)
-            
+
             def on_close():
                 dialog.destroy()
-            
+
             dialog.protocol("WM_DELETE_WINDOW", on_close)
             messagebox.showinfo(
                 "Mobile Scanner Started",
                 f"Scanning for: {course_code}\n\nOpen this URL on your phone:\n{url}\n\nOr scan the QR code above"
             )
             dialog.attributes('-topmost', False)  # Allow other windows to come to front now
-            
+
         except Exception as e:
             messagebox.showerror("Mobile Scanner Error", f"Could not start mobile scanner:\n{e}")
 
@@ -361,7 +369,7 @@ class DashboardUI:
         # (course_code, title, department_id, lecturer_id, credit_hours, grace_minutes)
         course_codes = [c[0] for c in courses]
 
-        course_var = tk.StringVar(value=course_codes[0])
+        course_var = tk.StringVar(master=self.root, value=course_codes[0])
         tk.OptionMenu(window, course_var, *course_codes).pack()
 
         def open_selected():
@@ -431,3 +439,7 @@ class DashboardUI:
         except Exception:
             # if launching login UI fails, exit silently
             pass
+
+
+def _as_tk_image(image: Any) -> Any:
+    return image

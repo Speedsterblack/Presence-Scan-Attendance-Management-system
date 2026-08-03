@@ -44,7 +44,7 @@ class ScanQRUI:
         self._bg_label = apply_background_image(self.root, (520, 520))
 
         # Small header logo above the scanner title
-        self._logo_image = get_logo_image((72, 72))
+        self._logo_image = get_logo_image((72, 72), master=self.root)
         if self._logo_image is not None:
             tk.Label(self.root, image=self._logo_image, bg=self.bg_color, borderwidth=0).pack(pady=(10, 0))
 
@@ -274,7 +274,7 @@ class ScanQRUI:
             pil_img = qr.make_image(fill_color="black", back_color="white")
             
             # Convert to PhotoImage for Tkinter
-            qr_photo = ImageTk.PhotoImage(pil_img)
+            qr_photo = ImageTk.PhotoImage(pil_img, master=self.root)
             
             # Create dialog window
             dialog = tk.Toplevel(self.root)
@@ -410,7 +410,7 @@ class ScanQRUI:
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (500, 320))
         img = Image.fromarray(frame)
-        self._video_img = ImageTk.PhotoImage(img)
+        self._video_img = ImageTk.PhotoImage(img, master=self.root)
         if self._video_img is not None:
             self.video_label.configure(image=self._video_img)
 

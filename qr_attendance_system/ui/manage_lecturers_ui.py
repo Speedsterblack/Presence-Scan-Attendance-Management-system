@@ -21,7 +21,7 @@ class ManageLecturersUI:
         self._bg_label = apply_background_image(root, (520, 520))
 
         # Small header logo
-        self._logo_image = get_logo_image((64, 64))
+        self._logo_image = get_logo_image((64, 64), master=root)
         if self._logo_image is not None:
             tk.Label(root, image=self._logo_image, borderwidth=0).pack(pady=(8, 0))
 
@@ -80,7 +80,7 @@ class ManageLecturersUI:
         self.pw_e.pack(fill='x')
 
         tk.Label(right, text='Role').pack(anchor='w')
-        self.role_var = tk.StringVar(value='lecturer')
+        self.role_var = tk.StringVar(master=root, value='lecturer')
         # Only lecturers are managed here; admin/HOD accounts live in
         # their own table so that each department has exactly one HOD.
         role_menu = ttk.Combobox(right, textvariable=self.role_var, values=['lecturer'], state='readonly', width=18)

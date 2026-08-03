@@ -32,14 +32,14 @@ class SpecialDaysUI:
         form.pack(fill="x", pady=(0, 10))
 
         tk.Label(form, text="Date (YYYY-MM-DD):", bg="#ecf0f1").grid(row=0, column=0, sticky="w", padx=(0, 4))
-        self._date_var = tk.StringVar(value=date.today().strftime("%Y-%m-%d"))
+        self._date_var = tk.StringVar(master=self.root, value=date.today().strftime("%Y-%m-%d"))
         tk.Entry(form, textvariable=self._date_var, width=12).grid(row=0, column=1, sticky="w")
 
         tk.Label(form, text="Label:", bg="#ecf0f1").grid(row=0, column=2, sticky="w", padx=(10, 4))
-        self._label_var = tk.StringVar()
+        self._label_var = tk.StringVar(master=self.root)
         tk.Entry(form, textvariable=self._label_var, width=24).grid(row=0, column=3, sticky="w")
 
-        self._no_school_var = tk.BooleanVar(value=True)
+        self._no_school_var = tk.BooleanVar(master=self.root, value=True)
         ttk.Checkbutton(form, text="No-school day", variable=self._no_school_var).grid(row=0, column=4, sticky="w", padx=(10, 0))
 
         tk.Button(

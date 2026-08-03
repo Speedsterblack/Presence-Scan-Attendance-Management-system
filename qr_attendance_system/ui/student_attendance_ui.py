@@ -22,7 +22,7 @@ class StudentAttendanceUI:
         self.root.configure(bg=self.bg)
 
         self._bg_label = apply_background_image(root, (520, 520))
-        self._logo_image = get_logo_image((72, 72))
+        self._logo_image = get_logo_image((72, 72), master=root)
         if self._logo_image is not None:
             tk.Label(root, image=self._logo_image, bg=self.bg, borderwidth=0).pack(pady=(8, 0))
 
@@ -46,7 +46,7 @@ class StudentAttendanceUI:
         top.pack(fill="x", padx=10, pady=(0, 8))
 
         tk.Label(top, text="Search:", bg=self.bg, fg=self.fg).pack(side="left")
-        self.search_var = tk.StringVar()
+        self.search_var = tk.StringVar(master=root)
         self.search_entry = tk.Entry(top, textvariable=self.search_var, width=30)
         self.search_entry.pack(side="left", padx=(4, 6))
         self.search_entry.bind("<Return>", self._on_search)

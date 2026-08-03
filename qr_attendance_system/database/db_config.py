@@ -1,62 +1,89 @@
 import os
+import re
+import sqlite3
+from datetime import date, datetime, time
+from pathlib import Path
 from typing import Optional
 
-from psycopg2.pool import SimpleConnectionPool
-import psycopg2.extras
 
-
-DB_MIN_CONN = int(os.getenv("DB_MIN_CONN", "1"))
-DB_MAX_CONN = int(os.getenv("DB_MAX_CONN", "5"))
-# Default DSN can be overridden via the DATABASE_URL environment variable.
-DB_DSN = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:Speedster@localhost:5432/Presence_Scan",
+DB_PATH = Path(
+    os.getenv("DATABASE_PATH")
+    or Path(__file__).with_name("presence_scan.db")
 )
 
-_pool: Optional[SimpleConnectionPool] = None
+
+def _register_sqlite_adapters() -> None:
+    sqlite3.register_adapter(date, lambda value: value.isoformat())
+    sqlite3.register_adapter(datetime, lambda value: value.isoformat(sep=" "))
+    sqlite3.register_adapter(time, lambda value: value.strftime("%H:%M:%S"))
+
+    sqlite3.register_converter("DATE", lambda value: date.fromisoformat(value.decode()))
+    sqlite3.register_converter(
+        "TIMESTAMP",
+        lambda value: datetime.fromisoformat(value.decode().replace("Z", "+00:00")),
+    )
+    sqlite3.register_converter(
+        "TIME",
+        lambda value: datetime.strptime(value.decode(), "%H:%M:%S").time(),
+    )
+
+
+_register_sqlite_adapters()
 
 
 def init_db_pool(dsn: Optional[str] = None) -> None:
-    """Initialise a global connection pool if not already created."""
-    global _pool
-    if _pool is not None:
-        return
-    dsn = dsn or DB_DSN
-    if not dsn:
-        raise RuntimeError("DATABASE_URL not set")
-    _pool = SimpleConnectionPool(DB_MIN_CONN, DB_MAX_CONN, dsn)
+    """Prepare the local sqlite database file used by the app."""
+
+    # ``dsn`` is accepted for compatibility with older launchers, but the app
+    # now uses a local sqlite database by default.
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not DB_PATH.exists():
+        DB_PATH.touch()
+
+
+def _connect() -> sqlite3.Connection:
+    init_db_pool()
+    conn = sqlite3.connect(
+        DB_PATH,
+        detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+    )
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 def get_connection():
-    """Get a connection from the pool, creating the pool on first use."""
-    global _pool
-    if _pool is None:
-        init_db_pool()
-    assert _pool is not None
-    return _pool.getconn()
+    """Open a new connection to the local sqlite database."""
+
+    return _connect()
 
 
 def release_connection(conn) -> None:
-    """Return a connection to the pool."""
-    global _pool
-    if _pool is not None and conn is not None:
-        _pool.putconn(conn)
+    """Close a sqlite connection obtained from get_connection()."""
+
+    if conn is not None:
+        conn.close()
 
 
 def close_pool() -> None:
-    """Close all connections in the pool (for one-off scripts)."""
-    global _pool
-    if _pool is not None:
-        _pool.closeall()
-        _pool = None
+    """Compatibility no-op for the old pooled connection API."""
 
-class _CursorContext:
-    """Context manager that yields a RealDictCursor.
+    return None
 
-    This explicit class makes type checkers (like Pylance) recognize that the
-    result of get_cursor() implements the ContextManager protocol, avoiding
-    generator-with warnings while preserving the original behaviour.
-    """
+
+class _SQLiteRow(dict):
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+
+def _convert_placeholders(sql: str) -> str:
+    return re.sub(r"%s", "?", sql)
+
+
+class SQLiteCursorContext:
+    """Context manager that yields a sqlite cursor with dict-like rows."""
 
     def __init__(self, commit: bool = True):
         self._commit = commit
@@ -64,9 +91,9 @@ class _CursorContext:
         self._cur = None
 
     def __enter__(self):
-        self._conn = get_connection()
-        self._cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        return self._cur
+        self._conn = _connect()
+        self._cur = self._conn.cursor()
+        return self
 
     def __exit__(self, exc_type, exc, tb):
         try:
@@ -81,11 +108,36 @@ class _CursorContext:
                     self._cur.close()
             finally:
                 if self._conn is not None:
-                    release_connection(self._conn)
+                    self._conn.close()
 
+    def execute(self, sql, params=()):
+        assert self._cur is not None
+        return self._cur.execute(_convert_placeholders(sql), params)
 
-def get_cursor(commit: bool = True) -> _CursorContext:
-    """Return a context manager that yields a RealDictCursor.
+    def executemany(self, sql, seq_of_params):
+        assert self._cur is not None
+        return self._cur.executemany(_convert_placeholders(sql), seq_of_params)
+
+    def fetchone(self):
+        assert self._cur is not None
+        row = self._cur.fetchone()
+        return _SQLiteRow(dict(row)) if row is not None else None
+
+    def fetchall(self):
+        assert self._cur is not None
+        return [_SQLiteRow(dict(row)) for row in self._cur.fetchall()]
+
+    @property
+    def lastrowid(self):
+        assert self._cur is not None
+        return self._cur.lastrowid
+
+    def close(self) -> None:
+        if self._cur is not None:
+            self._cur.close()
+
+def get_cursor(commit: bool = True) -> SQLiteCursorContext:
+    """Return a context manager that yields a sqlite cursor.
 
     Usage remains::
 
@@ -93,5 +145,5 @@ def get_cursor(commit: bool = True) -> _CursorContext:
             cursor.execute(...)
     """
 
-    return _CursorContext(commit)
+    return SQLiteCursorContext(commit)
 

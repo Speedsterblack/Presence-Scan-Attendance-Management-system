@@ -82,17 +82,18 @@ class AdminDashboardUI:
         # Subtle centered background image behind content
         self._bg_label = apply_background_image(root, (520, 520))
 
-        # Window icon and header logo
-        self._icon_image = get_logo_image((64, 64))
+        self._icon_image = get_logo_image((64, 64), master=root)
         if self._icon_image is not None:
             try:
                 root.iconphoto(False, self._icon_image)
             except Exception:
                 pass
 
-        self._logo_image = get_logo_image((140, 140))
+        self._logo_image = get_logo_image((140, 140), master=root)
         if self._logo_image is not None:
-            tk.Label(root, image=self._logo_image, bg=BG_COLOR, borderwidth=0).pack(pady=(8, 0))
+            logo_lbl = tk.Label(root, image=self._logo_image, bg=BG_COLOR, borderwidth=0)
+            setattr(logo_lbl, "image", self._logo_image)
+            logo_lbl.pack(pady=(8, 0))
 
         tk.Label(
             root,
@@ -186,7 +187,7 @@ class AdminDashboardUI:
         filter_frame = tk.Frame(root, bg=BG_COLOR)
         filter_frame.pack(fill='x', padx=8, pady=(0, 4))
         tk.Label(filter_frame, text="Date (YYYY-MM-DD):", bg=BG_COLOR, fg=TEXT).pack(side="left")
-        self._date_var = tk.StringVar(value=self._current_date.strftime("%Y-%m-%d"))
+        self._date_var = tk.StringVar(master=root, value=self._current_date.strftime("%Y-%m-%d"))
         date_entry = tk.Entry(filter_frame, textvariable=self._date_var, width=12)
         date_entry.pack(side="left", padx=(4, 8))
         date_entry.bind("<Return>", self._on_date_entry_change)

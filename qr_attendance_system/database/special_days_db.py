@@ -19,33 +19,15 @@ def ensure_special_days_schema() -> None:
         return
 
     with get_cursor() as cursor:
-        cursor.execute(
-            "SELECT column_name FROM information_schema.columns WHERE table_name = 'special_days'"
-        )
-        columns = {row["column_name"] for row in cursor.fetchall()}
+        cursor.execute("PRAGMA table_info(special_days)")
+        columns = {row["name"] for row in cursor.fetchall()}
 
         legacy_shared_schema = "department_id" not in columns
         if legacy_shared_schema:
             cursor.execute(
-                "SELECT EXISTS ("
-                "  SELECT 1 FROM information_schema.table_constraints "
-                "  WHERE table_name = 'special_days' AND constraint_name = 'special_days_day_key'"
-                ") AS has_day_unique"
-            )
-            meta = cursor.fetchone() or {"has_day_unique": False}
-            if bool(meta.get("has_day_unique")):
-                cursor.execute("ALTER TABLE IF EXISTS special_days DROP CONSTRAINT IF EXISTS special_days_day_key")
-
-            cursor.execute(
-                "ALTER TABLE IF EXISTS special_days "
-                "ADD COLUMN IF NOT EXISTS department_id INT REFERENCES departments(department_id) ON DELETE CASCADE"
+                "ALTER TABLE special_days ADD COLUMN department_id INTEGER"
             )
             cursor.execute("UPDATE special_days SET department_id = 1 WHERE department_id IS NULL")
-            cursor.execute(
-                "ALTER TABLE IF EXISTS special_days "
-                "ALTER COLUMN department_id SET DEFAULT 1, "
-                "ALTER COLUMN department_id SET NOT NULL"
-            )
 
             cursor.execute("SELECT department_id FROM departments ORDER BY department_id")
             department_ids = [int(row["department_id"]) for row in cursor.fetchall()]
@@ -74,16 +56,6 @@ def ensure_special_days_schema() -> None:
                                 row["day"],
                             ),
                         )
-
-        cursor.execute(
-            "SELECT EXISTS ("
-            "  SELECT 1 FROM information_schema.table_constraints "
-            "  WHERE table_name = 'special_days' AND constraint_name = 'special_days_day_key'"
-            ") AS has_day_unique"
-        )
-        meta = cursor.fetchone() or {}
-        if bool(meta.get("has_day_unique")):
-            cursor.execute("ALTER TABLE IF EXISTS special_days DROP CONSTRAINT IF EXISTS special_days_day_key")
 
         cursor.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_special_days_department_day "

@@ -30,7 +30,7 @@ class ReportUI:
         self._bg_label = apply_background_image(self.root, (520, 520))
 
         # Small header logo
-        self._logo_image = get_logo_image((64, 64))
+        self._logo_image = get_logo_image((64, 64), master=root)
         if self._logo_image is not None:
             tk.Label(root, image=self._logo_image, bg=bg, borderwidth=0).pack(pady=(8, 0))
 
@@ -47,7 +47,7 @@ class ReportUI:
         filter_frame = tk.Frame(root, bg=bg)
         filter_frame.pack(fill="x", padx=10, pady=(0, 6))
         tk.Label(filter_frame, text="Date (YYYY-MM-DD):", bg=bg, fg=fg).pack(side="left")
-        self._date_var = tk.StringVar(value=self._current_date.strftime("%Y-%m-%d"))
+        self._date_var = tk.StringVar(master=root, value=self._current_date.strftime("%Y-%m-%d"))
         date_entry = tk.Entry(filter_frame, textvariable=self._date_var, width=12)
         date_entry.pack(side="left", padx=(4, 8))
         date_entry.bind("<Return>", self._on_date_entry_change)

@@ -111,7 +111,7 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
     search_frame = tk.Frame(win)
     search_frame.pack(fill='x', padx=10, pady=(10, 4))
     tk.Label(search_frame, text='Search:').pack(side='left')
-    search_var = tk.StringVar()
+    search_var = tk.StringVar(master=win)
     search_entry = tk.Entry(search_frame, textvariable=search_var)
     search_entry.pack(side='left', fill='x', expand=True, padx=(6, 10))
 
@@ -137,7 +137,7 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
     filter_frame = tk.Frame(win)
     filter_frame.pack(fill='x', padx=10, pady=(0, 6))
     tk.Label(filter_frame, text='Quick filters:').pack(side='left', padx=(0, 8))
-    current_filter = tk.StringVar(value='all')
+    current_filter = tk.StringVar(master=win, value='all')
 
     table_wrap = tk.Frame(win)
     table_wrap.pack(fill='both', expand=True, padx=10, pady=4)
@@ -164,7 +164,7 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
     tree.configure(yscrollcommand=vs.set)
     tree.configure(xscrollcommand=hs.set)
 
-    count_var = tk.StringVar(value='0 student(s)')
+    count_var = tk.StringVar(master=win, value='0 student(s)')
     tk.Label(win, textvariable=count_var, anchor='w').pack(fill='x', padx=10, pady=(0, 4))
 
     try:
@@ -382,7 +382,7 @@ class RegisterStudentUI:
         self._bg_label = apply_background_image(self.root, (520, 520))
 
         # Small header logo
-        self._logo_image = get_logo_image((64, 64))
+        self._logo_image = get_logo_image((64, 64), master=self.root)
         if self._logo_image is not None:
             tk.Label(root, image=self._logo_image, borderwidth=0).pack(pady=(8, 0))
 
@@ -548,16 +548,15 @@ class RegisterStudentUI:
     def open_student_ui(self):
         try:
             self.root.destroy()
-        except Exception:
-            pass
-        try:
+
             self.parent.deiconify()
             try:
                 self.parent.state("zoomed")
             except Exception:
                 pass
-        except Exception:
-            pass
+
+        except Exception as e:
+            print(f"Failed to open student UI: {e}")
 
     def show_qr(self, qr_path, student_id):
         qr_window = tk.Toplevel(self.root)
@@ -570,7 +569,7 @@ class RegisterStudentUI:
 
         img = Image.open(qr_path)
         img = img.resize((200, 200))
-        photo = ImageTk.PhotoImage(img)
+        photo = ImageTk.PhotoImage(img, master=qr_window)
 
         tk.Label(qr_window, image=photo).pack(pady=10)
         tk.Label(qr_window, text=f"Student ID: {student_id}").pack()
@@ -702,8 +701,8 @@ class RegisterStudentUI:
         )
         desel_all.pack(side='left', padx=6)
 
-        skip_existing_var = tk.BooleanVar(value=True)
-        generate_qr_var = tk.BooleanVar(value=True)
+        skip_existing_var = tk.BooleanVar(master=win, value=True)
+        generate_qr_var = tk.BooleanVar(master=win, value=True)
         tk.Checkbutton(ctrl_frame, text='Skip existing students', variable=skip_existing_var).pack(side='left', padx=12)
         tk.Checkbutton(ctrl_frame, text='Generate QR codes', variable=generate_qr_var).pack(side='left', padx=12)
 

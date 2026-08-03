@@ -1,12 +1,12 @@
 @echo off
 REM Launcher for a single university's Presence Scan app.
-REM Set DATABASE_URL to that university's PostgreSQL database, then
-REM double-click this file to run the custom app.
+REM The app now creates a local sqlite database automatically, so no
+REM PostgreSQL connection string is required.
 
 REM Always run from the folder where this script lives (project root)
 cd /d "%~dp0"
 
-set DATABASE_URL=postgresql://postgres:Speedster@localhost:5432/Presence_Scan
+REM set DATABASE_URL=postgresql://postgres:Speedster@localhost:5432/Presence_Scan
 
 call ".venv\Scripts\activate.bat"
 

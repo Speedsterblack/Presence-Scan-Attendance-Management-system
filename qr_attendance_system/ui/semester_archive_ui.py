@@ -27,7 +27,7 @@ class SemesterArchiveUI:
         self.root.configure(bg=bg)
 
         self._bg_label = apply_background_image(self.root, (520, 520))
-        self._logo_image = get_logo_image((64, 64))
+        self._logo_image = get_logo_image((64, 64), master=self.root)
         if self._logo_image is not None:
             tk.Label(self.root, image=self._logo_image, bg=bg, borderwidth=0).pack(pady=(8, 0))
 
@@ -43,7 +43,7 @@ class SemesterArchiveUI:
         top.pack(fill="x", padx=10, pady=(0, 8))
 
         tk.Label(top, text="Select semester:", bg=bg, fg=fg).pack(side="left")
-        self.semester_var = tk.StringVar()
+        self.semester_var = tk.StringVar(master=self.root)
         self.semester_menu = ttk.Combobox(top, textvariable=self.semester_var, state="readonly", width=42)
         self.semester_menu.pack(side="left", padx=(6, 0))
         self.semester_menu.bind("<<ComboboxSelected>>", lambda _e: self._refresh())

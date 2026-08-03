@@ -46,7 +46,7 @@ class InstitutionSetupUI:
 
         # Subtle background and logo for consistency
         self._bg_label = apply_background_image(self.root, (520, 520))
-        self._logo_image = get_logo_image((140, 140))
+        self._logo_image = get_logo_image((140, 140), master=self.root)
         if self._logo_image is not None:
             tk.Label(self.root, image=self._logo_image, bg=BG_COLOR, borderwidth=0).pack(pady=(8, 0))
 
@@ -251,7 +251,7 @@ class InstitutionSetupUI:
             bg=BG_COLOR,
             fg=TEXT,
         ).pack(side="left")
-        self.dept_uni_var = tk.StringVar()
+        self.dept_uni_var = tk.StringVar(master=self.root)
         self.dept_uni_combo = ttk.Combobox(
             top,
             textvariable=self.dept_uni_var,

@@ -27,9 +27,9 @@ The generated installer:
 - Installs app files to `Program Files\Presence Scan`
 - Creates Start Menu shortcuts
 - Optionally creates desktop shortcut
-- Automatically launches `install_prototype.ps1` after install for first-time setup (venv, dependencies, DB config, schema init, admin seed)
+- Automatically launches `install_prototype.ps1` after install for first-time setup (venv, dependencies, schema init, admin seed)
 
 ## Notes
 
-- The installer does not bundle Python or PostgreSQL itself.
-- End-users should have Python and PostgreSQL installed before running the first-time setup wizard.
+- The installer does not bundle Python itself.
+- End-users should have Python installed before running the first-time setup wizard.

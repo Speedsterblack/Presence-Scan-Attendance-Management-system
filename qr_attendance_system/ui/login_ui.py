@@ -16,7 +16,7 @@ class LoginUI:
         # a typical application window.
 
         # Window icon
-        self._icon_image = get_logo_image((64, 64))
+        self._icon_image = get_logo_image((64, 64), master=self.root)
         if self._icon_image is not None:
             try:
                 self.root.iconphoto(False, self._icon_image)
@@ -34,7 +34,7 @@ class LoginUI:
         image_frame = tk.Frame(container, bg="#0b1020")
         image_frame.pack(side="left", fill="both", expand=True)
 
-        self._bg_image = get_logo_image((420, 420))
+        self._bg_image = get_logo_image((420, 420), master=self.root)
         if self._bg_image is not None:
             tk.Label(
                 image_frame,
@@ -48,7 +48,7 @@ class LoginUI:
         form_frame.pack(side="right", fill="y", padx=70, pady=40)
         form_frame.pack_propagate(False)
 
-        self._logo_image = get_logo_image((96, 96))
+        self._logo_image = get_logo_image((96, 96), master=self.root)
         if self._logo_image is not None:
             tk.Label(form_frame, image=self._logo_image, bg="#f8fafc", borderwidth=0).pack(pady=(0, 14))
 
@@ -71,7 +71,7 @@ class LoginUI:
         role_frame = tk.Frame(form_frame, bg="#f8fafc")
         role_frame.pack(pady=12, fill="x")
         tk.Label(role_frame, text="Login as:", bg="#f8fafc").pack(anchor="w")
-        self.role_var = tk.StringVar(value="lecturer")
+        self.role_var = tk.StringVar(master=self.root, value="lecturer")
         ttk.Radiobutton(
             role_frame,
             text="Admin",
@@ -110,27 +110,36 @@ class LoginUI:
         self.root.minsize(800, 600)
 
     def login(self):
-        user_id = self.username_entry.get()
+        user_id = self.username_entry.get().strip()
         password = self.password_entry.get()
         role_choice = self.role_var.get() if hasattr(self, "role_var") else None
-        user = authenticate_user(user_id, password, role_choice)
+
+        try:
+            user = authenticate_user(user_id, password, role_choice)
+        except Exception as exc:
+            messagebox.showerror("Login Error", f"Could not verify your login details:\n{exc}")
+            return
 
         if not user:
             messagebox.showerror("Login Failed", "Invalid User ID or Password.")
             return
-        
-        login(user)
 
-        self.root.destroy()
         role = user[2] if isinstance(user, (list, tuple)) else user.get("role") if isinstance(user, dict) else "lecturer"
 
-        if role == "admin":
-            from ui.admin_dashboard_ui import AdminDashboardUI
-            root = tk.Tk()
-            AdminDashboardUI(root)
-            root.mainloop()
-        else:
-            from ui.dashboard_ui import DashboardUI
-            root = tk.Tk()
-            DashboardUI(root)
-            root.mainloop()
+        try:
+            login(user)
+
+            if role == "admin":
+                from ui.admin_dashboard_ui import AdminDashboardUI
+                root = tk.Tk()
+                AdminDashboardUI(root)
+            else:
+                from ui.dashboard_ui import DashboardUI
+                root = tk.Tk()
+                DashboardUI(root)
+        except Exception as exc:
+            messagebox.showerror("Login Error", f"Login succeeded, but the dashboard could not open:\n{exc}")
+            return
+
+        self.root.destroy()
+        root.mainloop()

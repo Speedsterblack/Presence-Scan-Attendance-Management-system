@@ -2,7 +2,7 @@
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Presence Scan Team"
 #define MyAppURL "https://example.com"
-#define MyAppExeName "launch_university_app.bat"
+#define MyAppExeName "PresenceScan.exe"
 
 [Setup]
 AppName={#MyAppName}
@@ -28,33 +28,21 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Files]
-Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\requirements-dev.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\installer\build_installer.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\launch_university_app.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\qr_attendance_system\*"; DestDir: "{app}\qr_attendance_system"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\qr_attendance_system\dist\PresenceScan.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\qr_attendance_system\assets\icons\Presence_Scan.ico"; DestDir: "{app}"; Flags: ignoreversion
+
 
 [Icons]
 Name: "{group}\{#MyAppName}"; \
     Filename: "{app}\{#MyAppExeName}"; \
-    WorkingDir: "{app}"
-
-Name: "{group}\Run Setup Wizard"; \
-    Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
-    Parameters: "-ExecutionPolicy Bypass -NoProfile -File ""{app}\build_installer.ps1"""; \
-    WorkingDir: "{app}"
+  WorkingDir: "{app}"; \
+  IconFilename: "{app}\Presence_Scan.ico"
 
 Name: "{commondesktop}\{#MyAppName}"; \
     Filename: "{app}\{#MyAppExeName}"; \
     Tasks: desktopicon; \
-    WorkingDir: "{app}"
-
-[Run]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
-    Parameters: "-ExecutionPolicy Bypass -NoProfile -File ""{app}\build_installer.ps1"""; \
-    Description: "Run first-time setup wizard (recommended)"; \
-    Flags: postinstall nowait skipifsilent
+  WorkingDir: "{app}"; \
+  IconFilename: "{app}\Presence_Scan.ico"
 
 [Code]
 function InitializeSetup(): Boolean;

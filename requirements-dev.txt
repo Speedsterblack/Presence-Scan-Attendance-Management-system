@@ -6,7 +6,6 @@
 -r requirements.txt
 
 # Development & Testing Tools
-jurigged==0.6.2  # File watcher for auto-reload during development (used with try/except in main.py)
 pytest==7.4.3  # Testing framework
 pytest-cov==4.1.0  # Coverage reporting for tests
 black==23.12.1  # Code formatter

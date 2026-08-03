@@ -25,7 +25,7 @@ class TranscriptUI:
         self.root.configure(bg=bg)
 
         self._bg_label = apply_background_image(self.root, (520, 520))
-        self._logo_image = get_logo_image((64, 64))
+        self._logo_image = get_logo_image((64, 64), master=self.root)
         if self._logo_image is not None:
             tk.Label(self.root, image=self._logo_image, bg=bg, borderwidth=0).pack(pady=(8, 0))
 
@@ -34,7 +34,7 @@ class TranscriptUI:
         top = tk.Frame(self.root, bg=bg)
         top.pack(fill="x", padx=10, pady=(0, 8))
         tk.Label(top, text="Student ID:", bg=bg, fg=fg).pack(side="left")
-        self.student_var = tk.StringVar()
+        self.student_var = tk.StringVar(master=self.root)
         tk.Entry(top, textvariable=self.student_var, width=24).pack(side="left", padx=6)
         tk.Button(top, text="Load", command=self._load, font=ui_styles.BUTTON_FONT, **ui_styles.PRIMARY_BUTTON).pack(side="left")
 

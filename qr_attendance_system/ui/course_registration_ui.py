@@ -34,7 +34,7 @@ class CourseRegistrationUI:
         self._bg_label = apply_background_image(self.root, (520, 520))
 
         # Small header logo
-        self._logo_image = get_logo_image((64, 64))
+        self._logo_image = get_logo_image((64, 64), master=self.root)
         if self._logo_image is not None:
             tk.Label(self.root, image=self._logo_image, borderwidth=0).pack(pady=(8, 0))
 
@@ -85,7 +85,7 @@ class CourseRegistrationUI:
         selector_frame.pack(pady=6)
 
         tk.Label(selector_frame, text="Course:").pack(side="left", padx=(0, 4))
-        self.course_var = tk.StringVar()
+        self.course_var = tk.StringVar(master=self.root)
         # Map human label -> course_code
         self.course_labels = []
         for code, title in self.courses:

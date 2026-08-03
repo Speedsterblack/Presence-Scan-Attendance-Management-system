@@ -12,12 +12,12 @@ def ensure_audit_table() -> None:
     with get_cursor() as cursor:
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS audit_log ("
-            "audit_id SERIAL PRIMARY KEY, "
-            "actor_id VARCHAR(20), "
-            "actor_role VARCHAR(20), "
-            "action VARCHAR(80) NOT NULL, "
+            "audit_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "actor_id TEXT, "
+            "actor_role TEXT, "
+            "action TEXT NOT NULL, "
             "details TEXT, "
-            "created_at TIMESTAMP NOT NULL DEFAULT NOW()"
+            "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
             ")"
         )
 

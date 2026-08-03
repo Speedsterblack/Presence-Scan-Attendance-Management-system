@@ -202,7 +202,7 @@ def search_students(query: str, limit: int = 50) -> List[StudentRow]:
         return []
 
     dept_id, course_codes = _get_current_scope()
-    like = f"%{query}%"
+    like = f"%{query.lower()}%"
     semester_id = get_active_semester_id(create_if_missing=True)
     if semester_id is None:
         semester_id = int(ensure_active_semester()["semester_id"])
@@ -220,7 +220,7 @@ def search_students(query: str, limit: int = 50) -> List[StudentRow]:
                 JOIN courses c ON c.course_id = cr.course_id
                 WHERE c.department_id = %s
                                     AND cr.semester_id = %s
-                  AND (s.student_id ILIKE %s OR s.student_name ILIKE %s)
+                  AND (LOWER(s.student_id) LIKE %s OR LOWER(s.student_name) LIKE %s)
                 ORDER BY s.student_name, s.student_id
                 LIMIT %s
                 """,
@@ -239,7 +239,7 @@ def search_students(query: str, limit: int = 50) -> List[StudentRow]:
                 JOIN courses c ON c.course_id = cr.course_id
                 WHERE c.course_code IN ({placeholders})
                                     AND cr.semester_id = %s
-                  AND (s.student_id ILIKE %s OR s.student_name ILIKE %s)
+                  AND (LOWER(s.student_id) LIKE %s OR LOWER(s.student_name) LIKE %s)
                 ORDER BY s.student_name, s.student_id
                 LIMIT %s
                 """,

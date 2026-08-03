@@ -38,7 +38,7 @@ class CourseUI:
         self._bg_label = apply_background_image(self.root, (520, 520))
 
         # Larger header logo (kept in a right column) and page title
-        self._logo_image = get_logo_image((160, 160))
+        self._logo_image = get_logo_image((160, 160), master=self.root)
         self._logo_label = None
         if self._logo_image is not None:
             self._logo_label = tk.Label(self.root, image=self._logo_image, bg=BG_COLOR, borderwidth=0)
@@ -72,7 +72,7 @@ class CourseUI:
         # so it lines up with other input fields.
         # This StringVar will hold the LECTURER NAME for display;
         # we map it back to an ID when saving.
-        self.lecturer_var = tk.StringVar()
+        self.lecturer_var = tk.StringVar(master=self.parent)
         self.lecturer_var.set("Assign a lecturer")
 
         lf = tk.Frame(self.form_container, bg=BG_COLOR)
@@ -193,7 +193,7 @@ class CourseUI:
         # Only allow weekdays (Monday to Friday)
         for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri"], start=1):
             tk.Label(frame, text=day, bg=BG_COLOR, fg=TEXT, width=6, font=ui_styles.LABEL_FONT).grid(row=i, column=0, sticky='w', pady=2)
-            var = tk.BooleanVar()
+            var = tk.BooleanVar(master=self.parent)
             cb = tk.Checkbutton(frame, variable=var, bg=BG_COLOR)
             cb.grid(row=i, column=1)
 
@@ -369,7 +369,7 @@ class CourseUI:
         search_frame = tk.Frame(win)
         search_frame.pack(fill='x', padx=10, pady=(10, 4))
         tk.Label(search_frame, text='Search:').pack(side='left')
-        search_var = tk.StringVar()
+        search_var = tk.StringVar(master=win)
         search_entry = tk.Entry(search_frame, textvariable=search_var)
         search_entry.pack(side='left', fill='x', expand=True, padx=(6, 10))
         
@@ -394,7 +394,7 @@ class CourseUI:
         filter_frame.pack(fill='x', padx=10, pady=(0, 6))
         tk.Label(filter_frame, text='Quick filters:').pack(side='left', padx=(0, 8))
 
-        current_filter = tk.StringVar(value='all')
+        current_filter = tk.StringVar(master=win, value='all')
 
         cols = ('course_code', 'course_name', 'lecturer', 'hours', 'start', 'end', 'grace_min')
         table_wrap = tk.Frame(win)
@@ -426,7 +426,7 @@ class CourseUI:
         tree.configure(yscrollcommand=vs.set)
         tree.configure(xscrollcommand=hs.set)
 
-        count_var = tk.StringVar(value='0 courses')
+        count_var = tk.StringVar(master=win, value='0 courses')
         tk.Label(win, textvariable=count_var, anchor='w').pack(fill='x', padx=10, pady=(0, 4))
 
         try:
@@ -682,7 +682,7 @@ class CourseUI:
             lec_id_to_name = {str(l[0]): l[1] for l in lecturers}
             lec_name_to_id = {v: k for k, v in lec_id_to_name.items()}
 
-            lec_var = tk.StringVar(ed)
+            lec_var = tk.StringVar(master=ed)
             current_lec_name = lec_id_to_name.get(str(row[3]), '')
             if current_lec_name:
                 lec_var.set(current_lec_name)
@@ -1044,7 +1044,7 @@ class CourseUI:
         # build name -> id map for this dialog
         name_to_id = {str(name): str(lid) for (lid, name, *_) in lecturers}
 
-        lid_var = tk.StringVar()
+        lid_var = tk.StringVar(master=win)
         # populate OptionMenu with NAMES
         menu = tk.OptionMenu(win, lid_var, *(name_to_id.keys() or []))
         menu.pack(pady=6)

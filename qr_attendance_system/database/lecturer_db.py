@@ -21,25 +21,16 @@ def _init_schema_metadata() -> None:
         return
 
     with get_cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = 'lecturers'
-            """
-        )
-        columns = {row["column_name"] for row in cursor.fetchall()}
-
-        user_column = "username" if "username" in columns else "lecturer_id" if "lecturer_id" in columns else None
-        name_column = "full_name" if "full_name" in columns else "lecturer_name" if "lecturer_name" in columns else None
+        cursor.execute("PRAGMA table_info(lecturers)")
+        columns = {row["name"] for row in cursor.fetchall()}
 
         _HAS_DEPARTMENT_FK = "department_id" in columns
 
         if "role" not in columns:
-            cursor.execute("ALTER TABLE lecturers ADD COLUMN role VARCHAR(20) DEFAULT 'lecturer'")
+            cursor.execute("ALTER TABLE lecturers ADD COLUMN role TEXT DEFAULT 'lecturer'")
 
-    _USER_COLUMN = user_column or "lecturer_id"
-    _NAME_COLUMN = name_column or "lecturer_name"
+    _USER_COLUMN = "lecturer_id"
+    _NAME_COLUMN = "lecturer_name"
 
 
 

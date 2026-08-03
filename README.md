@@ -13,6 +13,9 @@ cd qr_attendance_system
 python -m main.main
 ```
 
+The app creates its local sqlite database automatically on first run, so no
+separate database server or manual schema setup is required.
+
 ## One-step prototype installer (Windows)
 
 Use the guided installer script from the project root:
@@ -105,72 +108,11 @@ The system is now semester-aware. Key rules:
 - Low-attendance notification banner on the admin dashboard.
 - Dedicated Import Center for student/course/registration CSV imports.
 
-## Database per university (recommended deployment)
+## Local database mode
 
-This project is designed so that **each university uses its own
-PostgreSQL database**, all sharing the same schema. This avoids ID and
-password conflicts between University (for example two admins both
-using `1111 / 2468`).
+The current build runs in single-database local mode. On startup it creates a
+sqlite database file inside `qr_attendance_system/database/` and seeds the
+default university, department and active semester rows automatically.
 
-### 1. Create a database for each university
-
-For every university (e.g. `Harvard`):
-
-1. In PostgreSQL, create a dedicated database, for example
-   `presence_uni_harvard`.
-2. From the `qr_attendance_system` folder, run the schema initialiser
-   once **against that database**:
-
-   ```powershell
-   # In PowerShell from qr_attendance_system/
-   $env:DATABASE_URL = "postgresql://postgres:PasswordHere@localhost:5432/presence_uni_harvard"
-   python -m database.db_init
-   ```
-
-Repeat these steps for each university you want to support, changing
-the database name in `DATABASE_URL`.
-
-### 2. Create a launcher per university (Windows)
-
-An example launcher script is provided at the project root:
-`launch_example_university.bat`.
-
-To create a launcher for a specific university:
-
-1. Copy `launch_example_university.bat` and rename it, for example
-   `PresenceScan_Harvard.bat`.
-2. Edit the copied file and update the `DATABASE_URL` line to point to
-   that university's database:
-
-   ```bat
-   set DATABASE_URL=postgresql://postgres:PasswordHere@localhost:5432/presence_uni_harvard
-   ```
-
-3. (Optional) adjust username, password, host or port if your
-   PostgreSQL server is different.
-4. Double‑click the `.bat` file to start the app for that university.
-
-Each launcher binds the app to one database, so different University
-can safely reuse the same admin or lecturer IDs and passwords without
-any conflicts.
-
-### 3. Using the developer Institution Setup
-
-For each university database you should use the **Institution Setup**
-developer UI to define:
-
-- University (using a human‑readable University ID and name).
-- Departments (with Department ID, name, and associated university).
-- Admin (HOD) credentials for each department.
-
-The developer UI is launched separately from the main app so normal
-users never see it. From `qr_attendance_system/` (with the virtual
-environment activated and `DATABASE_URL` pointing at the desired
-university database), run:
-
-```bash
-python -m main.developer_main
-```
-
-These records live inside the chosen database, so each university keeps
-its own structure and admin accounts fully isolated from the others.
+Use `launch_university_app.bat` or `python -m main.main` to start the app; no
+external database URL is required for normal use.

@@ -101,7 +101,7 @@ def close_active_semester(end_date: date | None = None) -> Optional[dict[str, An
     with get_cursor() as cursor:
         cursor.execute(
             "UPDATE semesters "
-            "SET status = 'closed', end_date = COALESCE(%s, CURRENT_DATE), closed_at = NOW() "
+            "SET status = 'closed', end_date = COALESCE(%s, CURRENT_DATE), closed_at = CURRENT_TIMESTAMP "
             "WHERE semester_id = ("
             "    SELECT semester_id FROM semesters WHERE status = 'active' "
             "    ORDER BY start_date DESC, semester_id DESC LIMIT 1"
@@ -141,7 +141,7 @@ def create_semester(
     with get_cursor() as cursor:
         if active:
             cursor.execute(
-                "UPDATE semesters SET status = 'closed', end_date = COALESCE(end_date, CURRENT_DATE), closed_at = COALESCE(closed_at, NOW()) "
+                "UPDATE semesters SET status = 'closed', end_date = COALESCE(end_date, CURRENT_DATE), closed_at = COALESCE(closed_at, CURRENT_TIMESTAMP) "
                 "WHERE status = 'active'"
             )
         cursor.execute(

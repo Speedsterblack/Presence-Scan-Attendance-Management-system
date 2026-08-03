@@ -27,7 +27,7 @@ class StudentUI:
         self.root.protocol("WM_DELETE_WINDOW", self.go_back)
 
         # Small header logo
-        self._logo_image = get_logo_image((72, 72))
+        self._logo_image = get_logo_image((72, 72), master=root)
         if self._logo_image is not None:
             tk.Label(root, image=self._logo_image, bg=BG_COLOR, borderwidth=0).pack(pady=(10, 0))
 
@@ -137,7 +137,7 @@ class StudentUI:
         search_frame = tk.Frame(win)
         search_frame.pack(fill='x', padx=10, pady=(10, 4))
         tk.Label(search_frame, text='Search:').pack(side='left')
-        search_var = tk.StringVar()
+        search_var = tk.StringVar(master=win)
         search_entry = tk.Entry(search_frame, textvariable=search_var)
         search_entry.pack(side='left', fill='x', expand=True, padx=(6,10))
 
@@ -161,7 +161,7 @@ class StudentUI:
         filter_frame = tk.Frame(win)
         filter_frame.pack(fill='x', padx=10, pady=(0, 6))
         tk.Label(filter_frame, text='Quick filters:').pack(side='left', padx=(0, 8))
-        current_filter = tk.StringVar(value='all')
+        current_filter = tk.StringVar(master=win, value='all')
 
         cols = ('student_id', 'name', 'Department', 'level')
         table_wrap = tk.Frame(win)
@@ -184,7 +184,7 @@ class StudentUI:
         tree.configure(yscrollcommand=vs.set)
         tree.configure(xscrollcommand=hs.set)
 
-        count_var = tk.StringVar(value='0 student(s)')
+        count_var = tk.StringVar(master=win, value='0 student(s)')
         tk.Label(win, textvariable=count_var, anchor='w').pack(fill='x', padx=10, pady=(0, 4))
 
         # populate

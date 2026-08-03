@@ -88,7 +88,7 @@ class SettingsUI:
         self._bg_label = apply_background_image(self.root, (520, 520))
 
         # Small header logo
-        self._logo_image = get_logo_image((72, 72))
+        self._logo_image = get_logo_image((72, 72), master=self.root)
         if self._logo_image is not None:
             tk.Label(self.root, image=self._logo_image, bg=bg, borderwidth=0).pack(pady=(10, 0))
 
@@ -121,7 +121,7 @@ class SettingsUI:
         theme_frame.pack(fill="x", pady=6)
 
         tk.Label(theme_frame, text="Color theme:").grid(row=0, column=0, sticky="w", padx=6, pady=4)
-        self.theme_var = tk.StringVar(value=str(settings.get("theme", {}).get("name", "light")))
+        self.theme_var = tk.StringVar(master=self.root, value=str(settings.get("theme", {}).get("name", "light")))
         ttk.Radiobutton(theme_frame, text="Light", value="light", variable=self.theme_var, style="App.TRadiobutton").grid(row=0, column=1, sticky="w", pady=4)
         ttk.Radiobutton(theme_frame, text="Dark", value="dark", variable=self.theme_var, style="App.TRadiobutton").grid(row=0, column=2, sticky="w", pady=4)
         ttk.Radiobutton(theme_frame, text="System (match device)", value="system", variable=self.theme_var, style="App.TRadiobutton").grid(row=0, column=3, sticky="w", pady=4, padx=(8, 0))
@@ -131,7 +131,7 @@ class SettingsUI:
         grace_frame.pack(fill="x", pady=6)
 
         tk.Label(grace_frame, text="Default grace period (minutes):", bg=bg, fg=fg).grid(row=0, column=0, sticky="w", padx=6, pady=4)
-        self.grace_var = tk.StringVar(value=str(app_settings.get_default_grace_minutes()))
+        self.grace_var = tk.StringVar(master=self.root, value=str(app_settings.get_default_grace_minutes()))
         self.grace_entry = ttk.Entry(grace_frame, textvariable=self.grace_var, width=8, style="App.TEntry")
         self.grace_entry.grid(row=0, column=1, sticky="w", pady=4)
 
@@ -141,12 +141,12 @@ class SettingsUI:
             pin_frame.pack(fill="x", pady=6)
 
             tk.Label(pin_frame, text="New admin PIN:", bg=bg, fg=fg).grid(row=0, column=0, sticky="w", padx=6, pady=4)
-            self.admin_pin_var = tk.StringVar()
+            self.admin_pin_var = tk.StringVar(master=self.root)
             self.admin_pin_entry = ttk.Entry(pin_frame, textvariable=self.admin_pin_var, width=18, show="*", style="App.TEntry")
             self.admin_pin_entry.grid(row=0, column=1, sticky="w", padx=6, pady=4)
 
             tk.Label(pin_frame, text="Confirm PIN:", bg=bg, fg=fg).grid(row=1, column=0, sticky="w", padx=6, pady=4)
-            self.admin_pin_confirm_var = tk.StringVar()
+            self.admin_pin_confirm_var = tk.StringVar(master=self.root)
             self.admin_pin_confirm_entry = ttk.Entry(pin_frame, textvariable=self.admin_pin_confirm_var, width=18, show="*", style="App.TEntry")
             self.admin_pin_confirm_entry.grid(row=1, column=1, sticky="w", padx=6, pady=4)
 
@@ -169,7 +169,7 @@ class SettingsUI:
                 current_value = "Semester data is unavailable right now."
 
             tk.Label(semester_frame, text="Current semester:", bg=bg, fg=fg).grid(row=0, column=0, sticky="w", padx=6, pady=4)
-            self.current_semester_var = tk.StringVar(value=current_value)
+            self.current_semester_var = tk.StringVar(master=self.root, value=current_value)
             tk.Label(semester_frame, textvariable=self.current_semester_var, bg=bg, fg=fg, justify="left", wraplength=900).grid(row=0, column=1, sticky="w", padx=6, pady=4)
 
             tk.Label(semester_frame, text="Next semester name:", bg=bg, fg=fg).grid(row=1, column=0, sticky="w", padx=6, pady=4)
@@ -177,12 +177,12 @@ class SettingsUI:
                 next_value = self._suggest_next_semester_name()
             except Exception:
                 next_value = "Semester 2"
-            self.next_semester_var = tk.StringVar(value=next_value)
+            self.next_semester_var = tk.StringVar(master=self.root, value=next_value)
             self.next_semester_entry = ttk.Entry(semester_frame, textvariable=self.next_semester_var, width=28, style="App.TEntry")
             self.next_semester_entry.grid(row=1, column=1, sticky="w", padx=6, pady=4)
 
             tk.Label(semester_frame, text="Semester weeks:", bg=bg, fg=fg).grid(row=2, column=0, sticky="w", padx=6, pady=4)
-            self.sem_weeks_var = tk.StringVar(value=str(get_semester_weeks()))
+            self.sem_weeks_var = tk.StringVar(master=self.root, value=str(get_semester_weeks()))
             self.sem_weeks_entry = ttk.Entry(semester_frame, textvariable=self.sem_weeks_var, width=8, style="App.TEntry")
             self.sem_weeks_entry.grid(row=2, column=1, sticky="w", pady=4)
 
@@ -234,7 +234,7 @@ class SettingsUI:
         export_frame.pack(fill="x", pady=6)
 
         tk.Label(export_frame, text="Default export folder:", bg=bg, fg=fg).grid(row=0, column=0, sticky="w", padx=6, pady=4)
-        self.export_var = tk.StringVar(value=app_settings.get_export_directory())
+        self.export_var = tk.StringVar(master=self.root, value=app_settings.get_export_directory())
         entry = ttk.Entry(export_frame, textvariable=self.export_var, width=40, style="App.TEntry")
         entry.grid(row=0, column=1, sticky="w", pady=4)
 
@@ -273,11 +273,11 @@ class SettingsUI:
             admin_frame = tk.LabelFrame(container, text="Admin dashboard", bg=bg, fg=fg)
             admin_frame.pack(fill="x", pady=6)
 
-            self.auto_var = tk.BooleanVar(value=app_settings.get_admin_auto_refresh_enabled())
+            self.auto_var = tk.BooleanVar(master=self.root, value=app_settings.get_admin_auto_refresh_enabled())
             ttk.Checkbutton(admin_frame, text="Enable auto-refresh by default", variable=self.auto_var, style="App.TCheckbutton").grid(row=0, column=0, columnspan=2, sticky="w", padx=6, pady=4)
 
             tk.Label(admin_frame, text="Auto-refresh interval (seconds):").grid(row=1, column=0, sticky="w", padx=6, pady=4)
-            self.auto_interval_var = tk.StringVar(value=str(app_settings.get_admin_auto_refresh_interval()))
+            self.auto_interval_var = tk.StringVar(master=self.root, value=str(app_settings.get_admin_auto_refresh_interval()))
             self.auto_interval_entry = ttk.Entry(admin_frame, textvariable=self.auto_interval_var, width=8, style="App.TEntry")
             self.auto_interval_entry.grid(row=1, column=1, sticky="w", pady=4)
 
@@ -577,8 +577,8 @@ class SettingsUI:
             messagebox.showerror("Access Denied", "Only admin accounts can set the admin PIN.")
             return
 
-        pin = getattr(self, "admin_pin_var", tk.StringVar()).get().strip()
-        confirm = getattr(self, "admin_pin_confirm_var", tk.StringVar()).get().strip()
+        pin = getattr(self, "admin_pin_var", tk.StringVar(master=self.root)).get().strip()
+        confirm = getattr(self, "admin_pin_confirm_var", tk.StringVar(master=self.root)).get().strip()
         if not pin:
             messagebox.showerror("Error", "Enter a new admin PIN.")
             return
