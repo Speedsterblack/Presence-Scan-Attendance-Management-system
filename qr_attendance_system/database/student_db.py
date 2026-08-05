@@ -66,7 +66,7 @@ def get_all_students() -> List[Tuple[str, str, str, str]]:
             "WHERE c.department_id = %s AND cr.semester_id = %s"
         )
         params = (admin_department_id, semester_id)
-    query += " ORDER BY student_id"
+    query += " ORDER BY s.student_id"
 
     with get_cursor(commit=False) as cursor:
         cursor.execute(query, params)

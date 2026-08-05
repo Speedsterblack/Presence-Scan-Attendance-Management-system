@@ -206,16 +206,16 @@ class StudentUI:
         # keep a master list for filtering
         master_items = []
         for r in rows:
-            sid, name, Department, level = r
-            txt = f"{sid} - {name} ({Department}, {level})"
-            master_items.append((sid, name, Department, level, txt))
-            tree.insert('', 'end', values=(sid, name, Department, level))
+            student_id, name, Department, level = r
+            txt = f"{student_id} - {name} ({Department}, {level})"
+            master_items.append((student_id, name, Department, level, txt))
+            tree.insert('', 'end', values=(student_id, name, Department, level))
 
         def _to_level_number(level: str) -> int:
             digits = ''.join(ch for ch in str(level or '') if ch.isdigit())
             return int(digits) if digits else -1
 
-        def _passes_quick_filter(sid, name, Department, level, txt):
+        def _passes_quick_filter(student_id, name, Department, level, txt):
             mode = current_filter.get()
             level_num = _to_level_number(level)
             if mode == 'lvl100':
@@ -234,9 +234,9 @@ class StudentUI:
             q = search_var.get().strip().lower()
             tree.delete(*tree.get_children())
             visible = 0
-            for sid, name, Department, level, txt in master_items:
-                if _passes_quick_filter(sid, name, Department, level, txt) and (not q or q in txt.lower()):
-                    tree.insert('', 'end', values=(sid, name, Department, level))
+            for student_id, name, Department, level, txt in master_items:
+                if _passes_quick_filter(student_id, name, Department, level, txt) and (not q or q in txt.lower()):
+                    tree.insert('', 'end', values=(student_id, name, Department, level))
                     visible += 1
             count_var.set(f'{visible} student(s)')
 
@@ -279,27 +279,27 @@ class StudentUI:
             self.last_deleted_students = []
             for iid in sel:
                 values = tree.item(iid, 'values')
-                sid = str(values[0]) if values else ''
-                if not sid:
+                student_id = str(values[0]) if values else ''
+                if not student_id:
                     continue
                 try:
                     # capture full student data for undo
-                    srow = get_student(sid)
+                    srow = get_student(student_id)
                     if srow:
                         self.last_deleted_students.append((srow[0], srow[1], srow[2], srow[3]))
-                    delete_student(sid)
+                    delete_student(student_id)
                     successes += 1
                 except Exception as e:
-                    failures.append((sid, str(e)))
+                    failures.append((student_id, str(e)))
 
             # refresh filtered view after deletions
             try:
                 refreshed_rows = get_all_students()
                 master_items.clear()
                 for r in refreshed_rows:
-                    sid, name, Department, level = r
-                    txt = f"{sid} - {name} ({Department}, {level})"
-                    master_items.append((sid, name, Department, level, txt))
+                    student_id, name, Department, level = r
+                    txt = f"{student_id} - {name} ({Department}, {level})"
+                    master_items.append((student_id, name, Department, level, txt))
                 filter_list()
             except Exception:
                 pass
@@ -334,21 +334,21 @@ class StudentUI:
                 return
             restored = 0
             errs = []
-            for sid, name, Department, level in self.last_deleted_students:
+            for student_id, name, Department, level in self.last_deleted_students:
                 try:
-                    add_student(sid, name, Department, level)
+                    add_student(student_id, name, Department, level)
                     restored += 1
                 except Exception as e:
-                    errs.append((sid, str(e)))
+                    errs.append((student_id, str(e)))
             self.last_deleted_students = []
             # reload master_items and listbox
             try:
                 new_rows = get_all_students()
                 master_items.clear()
                 for r in new_rows:
-                    sid, name, Department, level = r
-                    txt = f"{sid} - {name} ({Department}, {level})"
-                    master_items.append((sid, name, Department, level, txt))
+                    student_id, name, Department, level = r
+                    txt = f"{student_id} - {name} ({Department}, {level})"
+                    master_items.append((student_id, name, Department, level, txt))
                 filter_list()
             except Exception:
                 pass

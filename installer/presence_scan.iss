@@ -2,7 +2,7 @@
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Presence Scan Team"
 #define MyAppURL "https://example.com"
-#define MyAppExeName "PresenceScan.exe"
+#define MyAppExeName "Presence Scan.exe"
 
 [Setup]
 AppName={#MyAppName}
