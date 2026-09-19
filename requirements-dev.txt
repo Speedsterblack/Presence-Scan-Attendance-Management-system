@@ -11,3 +11,4 @@ pytest-cov==4.1.0  # Coverage reporting for tests
 black==23.12.1  # Code formatter
 flake8==6.1.0  # Static code linter
 mypy==1.8.0  # Static type checker
+pyinstaller==6.11.1  # Windows executable packaging

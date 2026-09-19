@@ -1,0 +1,6 @@
+lecturer_id,lecturer_name,password,role,department_id
+240001,Dr. Kwame Mensah,Password123!,lecturer,1
+240002,Dr. Ama Boateng,Password123!,lecturer,1
+240003,Mr. Kofi Asante,Password123!,lecturer,1
+240004,Ms. Efua Owusu,Password123!,lecturer,1
+240005,Mr. Yaw Ofori,Password123!,lecturer,1

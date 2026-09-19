@@ -34,7 +34,7 @@ def export_students_template_csv(filename: str) -> None:
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["student_id", "student_name", "Department", "level"])
-        writer.writerow(["S001", "Jane Doe", "Computer Science", "100"])
+        writer.writerow(["24001001", "Jane Doe", "Computer Science", "100"])
 
 
 def export_courses_template_csv(filename: str) -> None:
@@ -42,8 +42,11 @@ def export_courses_template_csv(filename: str) -> None:
 
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["course_code", "course_title", "lecturer_id", "credit_hours", "grace_minutes"])
-        writer.writerow(["CSC101", "Introduction to Computing", "L001", "3", "5"])
+        writer.writerow([
+            "course_code", "course_title", "lecturer_id", "credit_hours", "grace_minutes",
+            "day_of_week", "start_time", "end_time",
+        ])
+        writer.writerow(["CSC101", "Introduction to Computing", "240001", "3", "5", "Mon", "08:00", "10:00"])
 
 
 def export_registrations_template_csv(filename: str) -> None:
@@ -52,4 +55,4 @@ def export_registrations_template_csv(filename: str) -> None:
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["student_id", "course_code"])
-        writer.writerow(["S001", "CSC101"])
+        writer.writerow(["24001001", "CSC101"])

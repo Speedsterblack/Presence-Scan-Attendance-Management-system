@@ -6,10 +6,11 @@ from tkinter import filedialog, messagebox
 from typing import Any, Optional
 
 from config import settings as app_settings
-from database.course_db import add_course
 from database.course_registration_db import register_student_to_course
 from database.hod_db import get_hod_department
+from database.lecturer_db import add_lecturer, get_all_lecturers
 from database.student_db import add_student
+from services.course_service import create_course_with_timetable
 from ui.assets_utils import apply_background_image, get_logo_image
 from ui import styles as ui_styles
 from utils import session
@@ -45,7 +46,7 @@ class ImportCenterUI:
         tk.Label(
             self.root,
             text=(
-                "Use this page to import CSV templates for students, courses, and course registrations.\n"
+                "Import lecturers before courses so lecturer IDs satisfy course references.\n"
                 "Imports skip invalid rows and show a summary at the end."
             ),
             bg=bg,
@@ -64,6 +65,15 @@ class ImportCenterUI:
             width=24,
             font=ui_styles.BUTTON_FONT,
             **ui_styles.PRIMARY_BUTTON,
+        ).pack(pady=6)
+
+        tk.Button(
+            body,
+            text="Import Lecturers CSV",
+            command=self._import_lecturers,
+            width=24,
+            font=ui_styles.BUTTON_FONT,
+            **ui_styles.SECONDARY_BUTTON,
         ).pack(pady=6)
 
         tk.Button(
@@ -150,6 +160,40 @@ class ImportCenterUI:
 
         self._show_summary("Students import", success, failures)
 
+    def _import_lecturers(self) -> None:
+        dept_id = self._admin_department_id()
+        if dept_id is None:
+            messagebox.showerror("Import Error", "Could not determine your admin department.")
+            return
+
+        path = self._select_csv("Select lecturers CSV")
+        if not path:
+            return
+
+        success = 0
+        failures: list[str] = []
+        try:
+            with open(path, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for idx, row in enumerate(reader, start=2):
+                    lecturer_id = str(row.get("lecturer_id") or row.get("Lecturer_ID") or "").strip()
+                    lecturer_name = str(row.get("lecturer_name") or row.get("full_name") or "").strip()
+                    password = str(row.get("password") or "").strip()
+                    role = str(row.get("role") or "lecturer").strip() or "lecturer"
+                    if not lecturer_id or not lecturer_name or not password:
+                        failures.append(f"row {idx}: missing lecturer_id/lecturer_name/password")
+                        continue
+                    try:
+                        add_lecturer(lecturer_id, lecturer_name, password, role, department_id=dept_id)
+                        success += 1
+                    except Exception as exc:
+                        failures.append(f"row {idx}: {exc}")
+        except Exception as exc:
+            messagebox.showerror("Import Error", f"Could not read file:\n{exc}")
+            return
+
+        self._show_summary("Lecturers import", success, failures)
+
     def _import_courses(self) -> None:
         dept_id = self._admin_department_id()
         if dept_id is None:
@@ -162,6 +206,7 @@ class ImportCenterUI:
 
         success = 0
         failures: list[str] = []
+        lecturer_ids = {str(row[0]).strip() for row in get_all_lecturers()}
         try:
             with open(path, newline="", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
@@ -171,9 +216,18 @@ class ImportCenterUI:
                     lecturer_id = str(row.get("lecturer_id") or "").strip()
                     credit_hours_text = str(row.get("credit_hours") or "0").strip()
                     grace_text = str(row.get("grace_minutes") or "0").strip()
+                    day = str(row.get("day_of_week") or row.get("day") or "").strip()
+                    start_time = str(row.get("start_time") or "").strip()
+                    end_time = str(row.get("end_time") or "").strip()
 
                     if not course_code or not course_title or not lecturer_id:
                         failures.append(f"row {idx}: missing course_code/course_title/lecturer_id")
+                        continue
+                    if lecturer_id not in lecturer_ids:
+                        failures.append(f"row {idx}: lecturer ID {lecturer_id} was not found; import lecturers first")
+                        continue
+                    if any((day, start_time, end_time)) and not all((day, start_time, end_time)):
+                        failures.append(f"row {idx}: day_of_week, start_time, and end_time must be supplied together")
                         continue
 
                     try:
@@ -186,14 +240,13 @@ class ImportCenterUI:
                         continue
 
                     try:
-                        add_course(
+                        create_course_with_timetable(
                             course_code,
                             course_title,
-                            None,
-                            credit_hours,
                             lecturer_id,
+                            credit_hours,
                             grace_minutes,
-                            department_id=dept_id,
+                            [(day, start_time, end_time)],
                         )
                         success += 1
                     except Exception as exc:

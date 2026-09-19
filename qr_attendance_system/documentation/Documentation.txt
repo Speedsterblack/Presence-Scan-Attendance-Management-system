@@ -60,7 +60,8 @@ System Outputs	1
 4.1.2  Student QR Code Generation Module	1
 4.1.3  QR Code Scanning Module	1
 4.1.4  Attendance Recording and Reporting Module	1
-4.1.5  Administrative Data Management and Current Version Updates	1
+4.1.5  Administrative Data Management	1
+4.1.6  Windows Packaging and Installation	1
 4.2  Testing Strategy	1
 4.3  Test Cases and Results	1
 4.4  Evaluation	1
@@ -86,7 +87,7 @@ Introduction
 Attendance management is a critical administrative function in tertiary institutions, serving as a key indicator of student engagement, academic participation, and eligibility for assessments. Institutions have long depended on paper registers, manual roll calls, and circulated signature sheets — methods that are inefficient, susceptible to manipulation, and time-consuming, particularly in large cohorts where manual marking can consume a significant portion of lecture time.
 The global expansion of higher education enrolment has compounded these inefficiencies. As class sizes grow and institutions manage more courses across multiple departments, the administrative overhead of manual attendance recording scales disproportionately. Lecturers are expected to track and maintain accurate records for dozens of students per session, often across multiple cohorts, while simultaneously managing lesson delivery and student engagement.
 The proliferation of affordable digital tools has opened new pathways for automating attendance workflows in higher education. QR (Quick Response) code technology is especially attractive: codes can be generated at negligible cost, scanned in under a second, and deployed without specialist hardware. This project leverages these properties by generating individual QR codes for registered students and providing a webcam-based desktop interface for scanning.
-Unlike many QR-based systems that require a dependable internet connection or full web deployment, Presence Scan operates as a standalone desktop application backed by a local PostgreSQL database and a live camera feed. The system validates each scanned student against the active timetable, checks that the scanning lecturer is assigned to the current course, applies a configurable grace period, and records attendance — all without external network dependency. This architecture makes the system particularly well-suited to institutions with limited or unreliable internet infrastructure, which remain prevalent across sub-Saharan Africa and other developing regions.
+Unlike many QR-based systems that require a dependable internet connection or full web deployment, Presence Scan operates as a standalone desktop application backed by a local SQLite database and a live camera feed. The system validates each scanned student against the active timetable, checks that the scanning lecturer is assigned to the current course, applies a configurable grace period, and records attendance — all without external network dependency. This architecture makes the system particularly well-suited to institutions with limited or unreliable internet infrastructure, which remain prevalent across sub-Saharan Africa and other developing regions.
 
 1.2  Problem Statement
 Traditional attendance management systems in tertiary institutions are inefficient, time-consuming, and vulnerable to deliberate fraud. Manual recording frequently results in inaccurate records, administrative bottlenecks, and proxy attendance — where one student marks attendance on behalf of an absent peer. The consequences of inaccurate attendance records extend beyond administrative inconvenience: students may be incorrectly barred from examinations, institutional accreditation bodies may receive misleading data, and lecturers face additional workloads reconciling and correcting discrepant records.
@@ -128,7 +129,7 @@ The following capabilities are within scope:
 •	Semester-aware attendance and registration management.
 •	Special-day and timetable validation for attendance recording and dashboard date navigation.
 •	Admin tools such as audit log viewing, semester rollover, semester archive, and CSV template export.
-•	Per-university deployment structure, where each university uses its own PostgreSQL database with the same schema.
+•	Per-university deployment structure, where each university uses its own local SQLite database with the same schema.
 The following areas are explicitly excluded from scope:
 •	Biometric authentication (fingerprint or facial recognition).
 •	Integration with national student or identity databases.
@@ -142,7 +143,7 @@ The following limitations are acknowledged:
 •	The system was validated in a limited academic environment and may require further testing before full institutional deployment.
 •	Time constraints restricted the breadth of user acceptance testing during the project period.
 •	The system depends on a functioning webcam or camera device for scanning operations.
-•	Deployment is currently tied to the configured PostgreSQL database and local Windows environment.
+•	Deployment is currently tied to the local Windows environment and the SQLite database file created for each installation.
 
 1.8  Research Methodology Overview
 The project adopts the Agile Software Development Methodology, chosen for its support of iterative delivery, continuous stakeholder feedback, and adaptive planning — attributes well-suited to a system that must simultaneously satisfy the needs of students, lecturers, and administrators. Agile's sprint-based structure allowed requirements to be refined progressively as early prototypes were demonstrated to prospective users, ensuring that the final system reflected real institutional workflows rather than assumed ones.
@@ -159,7 +160,7 @@ Frontend / Desktop UI	Python Tkinter
 Camera and QR Scanning	OpenCV, pyzbar
 QR Code Generation	qrcode, Pillow
 Backend Logic	Python
-Database	PostgreSQL via psycopg2
+Database	SQLite via Python's built-in sqlite3 module
 Development IDE	Visual Studio Code
 Version Control	Git
 Deployment OS	Windows
@@ -265,7 +266,7 @@ The first and most pervasive limitation is the dependency on student-owned smart
 The second structural limitation is network dependency. SmartTendance and Attenqo both require active internet connectivity for core operations; UAMS mitigates this through offline sync but still requires a functioning backend for data management. A system that operates entirely locally, with no external network requirement for day-to-day attendance recording, is more resilient and appropriate for institutions with limited or inconsistent connectivity.
 The third limitation is infrastructure cost. SmartTendance's cloud subscription, Attenqo's per-seat mobile licensing, and UAMS's BLE beacon installation all introduce recurring or one-time costs that may be prohibitive for smaller or less well-resourced institutions. A system deployable on hardware the institution already owns — a desktop computer and a webcam — with open-source or low-cost software components occupies a substantially more accessible cost point.
 Finally, none of the reviewed systems is purpose-designed for staff-managed, lecturer-controlled desktop-based scanning. They are all student-facing applications in which the student is an active participant in the attendance recording process. This design choice introduces dependencies on student device availability, student willingness to install and maintain the application, and student compliance with the process — all of which can fail independently of institutional intent.
-Presence Scan is designed to address this gap directly. By placing a webcam-based scanner under the lecturer's control on a standard desktop machine, and by operating against a local PostgreSQL database that requires no external connectivity, the system eliminates student device dependencies and network requirements simultaneously. Timetable validation and duplicate-entry rejection provide fraud resistance appropriate to the institutional context without requiring the privacy-sensitive data collection of biometric systems. The following chapters detail the design and implementation of this approach.
+Presence Scan is designed to address this gap directly. By placing a webcam-based scanner under the lecturer's control on a standard desktop machine, and by operating against a local SQLite database that requires no external connectivity, the system eliminates student device dependencies and network requirements simultaneously. Timetable validation and duplicate-entry rejection provide fraud resistance appropriate to the institutional context without requiring the privacy-sensitive data collection of biometric systems. The following chapters detail the design and implementation of this approach.
 
 
   CHAPTER THREE  
@@ -319,13 +320,13 @@ Non-functional requirements in detail:
 - Reliability: the application should continue operating during a full lecture session even if the camera briefly loses frame quality.
 - Usability: the UI should keep important actions visible and reduce the number of clicks required for common tasks.
 - Maintainability: logic should remain separated across modules so scanning, settings, and reporting can evolve independently.
-- Portability: the application should run in a typical Windows desktop environment with a local PostgreSQL server.
+- Portability: the application should run in a typical Windows desktop environment with a local SQLite database file.
 - Data integrity: database constraints must prevent invalid, duplicate, or cross-semester attendance records.
 
 3.3  System Architecture
-Presence Scan follows a desktop client architecture built with Python Tkinter and a PostgreSQL database layer. The user interface, business logic, and database operations are implemented in modular Python files to promote maintainability and extensibility. This separation of concerns means that individual modules — for example, the scanning engine or the reporting layer — can be updated or replaced without cascading changes across the entire codebase.
-The current deployment model is per university: each institution uses its own PostgreSQL database while sharing the same schema. This avoids cross-institution data conflicts and allows a university to keep its lecturers, departments, students, and attendance records isolated from other deployments.
-The choice of a local PostgreSQL database rather than a cloud-hosted data store was deliberate. It eliminates the latency and reliability risks associated with network-dependent data access, ensures that attendance sessions can proceed uninterrupted regardless of internet connectivity, and gives institutions direct control over their student data without dependency on third-party service providers.
+Presence Scan follows a desktop client architecture built with Python Tkinter and a SQLite database layer. The user interface, business logic, and database operations are implemented in modular Python files to promote maintainability and extensibility. This separation of concerns means that individual modules — for example, the scanning engine or the reporting layer — can be updated or replaced without cascading changes across the entire codebase.
+The current deployment model is per university: each institution uses its own SQLite database file while sharing the same schema. This avoids cross-institution data conflicts and allows a university to keep its lecturers, departments, students, and attendance records isolated from other deployments.
+The choice of a local SQLite database rather than a cloud-hosted data store was deliberate. It eliminates the latency and reliability risks associated with network-dependent data access, ensures that attendance sessions can proceed uninterrupted regardless of internet connectivity, and gives institutions direct control over their student data without dependency on third-party service providers.
 Three primary application areas interact with the system:
 •	Login Screen — allows administrators and lecturers to authenticate and initialise a session.
 •	Lecturer Dashboard — provides access to QR scanning, attendance reports, student management, and settings.
@@ -400,7 +401,7 @@ The ER diagram defines how the core data entities relate to one another. Univers
 The component diagram presents the desktop application as a set of cooperating modules. The user interface layer contains the login screen, lecturer dashboard, admin dashboard, settings window, import center, and semester archive. The service layer contains authentication, export, and QR scanning logic. The database layer contains modules for students, lecturers, courses, semesters, attendance, departments, and audit logs. Supporting utilities handle session state, password hashing, theme application, and file export. This diagram demonstrates the project's separation of concerns and explains how individual modules can be maintained independently.
 
 3.6.6  Deployment / Architecture Diagram
-The deployment diagram shows the system as a single desktop client connected to a local PostgreSQL server. The application runs on a Windows workstation with a webcam attached for scanning. The desktop UI communicates with the service modules, which in turn read from and write to the local database. CSV import and export operations interact with the filesystem, while QR code generation stores image files in the project folders. This architecture reflects the current stage of the project, which is designed for local institutional deployment rather than cloud hosting.
+The deployment diagram shows the system as a single desktop client connected to a local SQLite database file. The application runs on a Windows workstation with a webcam attached for scanning. The desktop UI communicates with the service modules, which in turn read from and write to the local database. CSV import and export operations interact with the filesystem, while QR code generation stores image files in the project folders. This architecture reflects the current stage of the project, which is designed for local institutional deployment rather than cloud hosting.
 
 (Insert the actual figures for these diagrams in the final submission.)
 
@@ -411,10 +412,10 @@ Operating System	Windows 10 or later
 Programming Language	Python 3.x
 Desktop UI	Tkinter
 Camera & QR Libraries	OpenCV, pyzbar, qrcode, Pillow
-Database	PostgreSQL 15+
+Database	SQLite (bundled with Python)
 Development IDE	Visual Studio Code
 Version Control	Git / GitHub
-Hardware: Computer	Desktop or laptop capable of running Python and PostgreSQL
+Hardware: Computer	Desktop or laptop capable of running the packaged Windows application
 Hardware: Camera	Webcam or built-in camera for QR scanning
 Hardware: Printer	Optional — for distributing QR codes as hard copies
 
@@ -456,7 +457,7 @@ The reporting layer currently supports the operational needs of the project stag
 The module also supports the evaluation goals of the project by making attendance results easy to inspect, compare, and verify against timetable slots. That makes it possible to justify the system's effectiveness using real records rather than manual estimates alone.
 
 4.1.5  Administrative Data Management
-The current version of the application uses a per-university deployment model. University, department, lecturer, course, and student records are managed inside one institution-specific PostgreSQL database rather than across shared tenants. The developer entry point is used to create and manage the institution structure before normal users sign in.
+The current version of the application uses a per-university deployment model. University, department, lecturer, course, and student records are managed inside one institution-specific SQLite database file rather than across shared tenants. The developer entry point is used to create and manage the institution structure before normal users sign in.
 
 Lecturer management supports creating a new lecturer account, updating an existing lecturer's profile details, and resetting the lecturer's password. Passwords are hashed before storage in both lecturer and HOD tables, and the reset flow updates the hash rather than storing plaintext values.
 
@@ -469,6 +470,19 @@ This settings area also acts as the control center for the current stage of the 
 The CSV import workflow for students, courses, and registrations now shows failures directly in the Import Center dialog instead of writing separate `.failures.txt` sidecar files to disk. This keeps the import process simpler while still showing validation issues clearly to the user.
 
 The admin dashboard date navigation has also been refined. Moving between days now depends on timetable and special-day rules rather than the latest attendance record, so the interface can navigate through scheduled lecture days without being blocked by old attendance history.
+
+4.1.6  Windows Packaging and Installation
+The project provides two separate Windows installers. The main installer packages the normal login and attendance application as `PresenceScan.exe`, while the developer installer packages the institution setup application as `DeveloperPresenceScan.exe`. Both executables are built with PyInstaller and distributed through Inno Setup definitions in the `installer` directory.
+
+The generated installers are named `PresenceScanInstaller.exe` and `PresenceScanDeveloperInstaller.exe`. Each installer creates a Start Menu shortcut and optionally creates a desktop shortcut. Installation uses a per-user application directory so the application can write its local SQLite database without requiring administrator privileges. Python is not required on a target computer after installation because the packaged executables contain the application runtime and dependencies.
+
+To build the installers, the build machine requires Python, the dependencies in `requirements-dev.txt` including PyInstaller, and Inno Setup 6. From the project root, the complete build is started with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\installer\build_installer.ps1
+```
+
+The build script first creates both application executables from their PyInstaller specifications and then compiles both Inno Setup installer packages. The installer package is intended for the current Windows desktop deployment model and does not include a PostgreSQL server requirement.
 
 4.2  Testing Strategy
 A four-level testing strategy is being employed to ensure system correctness, integration integrity, and usability:

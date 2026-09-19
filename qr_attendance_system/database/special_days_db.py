@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import List, Tuple, Optional
 
-from database.db_config import get_cursor
+from database.db_config import get_cursor, is_postgres
 from database.hod_db import get_hod_department
 from utils import session
 
@@ -19,7 +19,13 @@ def ensure_special_days_schema() -> None:
         return
 
     with get_cursor() as cursor:
-        cursor.execute("PRAGMA table_info(special_days)")
+        if is_postgres():
+            cursor.execute(
+                "SELECT column_name AS name FROM information_schema.columns "
+                "WHERE table_schema = current_schema() AND table_name = 'special_days'"
+            )
+        else:
+            cursor.execute("PRAGMA table_info(special_days)")
         columns = {row["name"] for row in cursor.fetchall()}
 
         legacy_shared_schema = "department_id" not in columns

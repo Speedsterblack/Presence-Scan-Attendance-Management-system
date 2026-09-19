@@ -13,8 +13,61 @@ cd qr_attendance_system
 python -m main.main
 ```
 
-The app creates its local sqlite database automatically on first run, so no
-separate database server or manual schema setup is required.
+The app uses local SQLite by default. To use Supabase PostgreSQL, set
+`DATABASE_URL` before starting the app and initialize the schema once:
+
+```powershell
+$env:DATABASE_URL = "postgresql://postgres:<password>@<project-ref>.pooler.supabase.com:6543/postgres?sslmode=require"
+cd qr_attendance_system
+python -m database.db_init
+python -m main.main
+```
+
+Keep the connection string in an environment variable or a launcher-specific
+secret store. Do not commit it to the repository. When `DATABASE_URL` is not
+set, the app continues to use its local SQLite database.
+
+## Local-first operation
+
+The app keeps the interface responsive on slow connections by default when
+PostgreSQL parameters are configured. It reads and writes local
+SQLite during normal operation. A background worker mirrors local rows to
+Supabase every 5 seconds; network failures are retried on the next cycle and
+never block the UI.
+
+To explicitly control this behavior, set `LOCAL_PRIMARY=1` for local-first
+operation or `LOCAL_PRIMARY=0` to make the configured PostgreSQL database the
+primary connection.
+
+```powershell
+$env:LOCAL_PRIMARY = "1"
+```
+
+The local database remains the fast working copy. Synchronization is
+bidirectional for rows that do not already exist on the other side: remote
+rows are imported locally, and local rows are uploaded to Supabase. When both
+databases contain different values for the same primary key, the local row is
+kept to avoid silently overwriting active local data.
+
+## Attendance offline cache
+
+When connected to PostgreSQL, the app keeps a local attendance cache at
+`qr_attendance_system/database/attendance_cache.db`. Failed attendance writes
+are queued there and retried when the app starts with a working connection.
+Successfully synchronized cache rows are removed after seven days. Pending
+rows are retained until they can be synchronized.
+
+To change the retention period or cache location, set these environment
+variables before starting the app:
+
+```powershell
+$env:ATTENDANCE_CACHE_DAYS = "7"
+$env:ATTENDANCE_CACHE_PATH = "C:\path\to\attendance_cache.db"
+```
+
+Only attendance cache data is retained temporarily. Students, courses,
+registrations, semesters, timetables, and other master data remain in the
+Supabase database.
 
 ## One-step prototype installer (Windows)
 
@@ -47,9 +100,10 @@ Optional flags:
 
 ## Real GUI installer package (Windows .exe)
 
-This project now includes an Inno Setup based GUI installer definition in:
+This project now includes Inno Setup based GUI installers for both application entry points:
 
 - [installer/presence_scan.iss](installer/presence_scan.iss)
+- [installer/presence_scan_developer.iss](installer/presence_scan_developer.iss)
 
 Build script:
 
@@ -64,16 +118,17 @@ Build script:
 powershell -ExecutionPolicy Bypass -File .\installer\build_installer.ps1
 ```
 
-3. Output file:
+3. Output files:
 
 - `dist\PresenceScanInstaller.exe`
+- `dist\PresenceScanDeveloperInstaller.exe`
 
 ### What the GUI installer does
 
-- Installs app files to `Program Files\Presence Scan`
-- Creates Start Menu shortcuts
-- Optionally creates a desktop shortcut
-- Launches first-time setup wizard (`install_prototype.ps1`) after install
+- Builds and installs the normal login app and the developer institution-setup app separately
+- Creates Start Menu shortcuts for both apps
+- Optionally creates per-user desktop shortcuts
+- Installs to a writable per-user application directory for local SQLite database support
 
 ## Semester lifecycle (current behavior)
 

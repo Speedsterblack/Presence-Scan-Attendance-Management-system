@@ -34,24 +34,23 @@ def get_single_university_id() -> int:
 
 
 def add_university(code: str, name: str) -> None:
-    """Create/update the single university for this database."""
-    university_id = get_single_university_id()
+    """Create a university, updating an existing row with the same code."""
     with get_cursor() as cursor:
         cursor.execute(
-            "UPDATE University SET university_code = %s, university_name = %s "
-            "WHERE university_id = %s",
-            (code, name, university_id),
+            "INSERT INTO University (university_code, university_name) "
+            "VALUES (%s, %s) "
+            "ON CONFLICT (university_code) DO UPDATE "
+            "SET university_name = EXCLUDED.university_name",
+            (code, name),
         )
 
 
 def get_all_University() -> List[Tuple[int, str | None, str]]:
-    """Return a single-item list for the one university in this database."""
-    university_id = get_single_university_id()
+    """Return every registered university."""
     with get_cursor(commit=False) as cursor:
         cursor.execute(
             "SELECT university_id, university_code, university_name "
-            "FROM University WHERE university_id = %s",
-            (university_id,),
+            "FROM University ORDER BY university_id",
         )
         rows = cursor.fetchall()
 
@@ -62,12 +61,11 @@ def get_all_University() -> List[Tuple[int, str | None, str]]:
 
 
 def get_university(university_id: int) -> Optional[Tuple[int, str | None, str]]:
-    effective_id = get_single_university_id()
     with get_cursor(commit=False) as cursor:
         cursor.execute(
             "SELECT university_id, university_code, university_name "
             "FROM University WHERE university_id = %s",
-            (effective_id,),
+            (university_id,),
         )
         r = cursor.fetchone()
 
@@ -78,13 +76,13 @@ def get_university(university_id: int) -> Optional[Tuple[int, str | None, str]]:
 
 
 def update_university(university_id: int, code: str, name: str) -> None:
-    effective_id = get_single_university_id()
     with get_cursor() as cursor:
         cursor.execute(
             "UPDATE University SET university_code = %s, university_name = %s WHERE university_id = %s",
-            (code, name, effective_id),
+            (code, name, university_id),
         )
 
 
 def delete_university(university_id: int) -> None:
-    raise ValueError("Single-school mode: deleting the only university is not allowed")
+    with get_cursor() as cursor:
+        cursor.execute("DELETE FROM University WHERE university_id = %s", (university_id,))

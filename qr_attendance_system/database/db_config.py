@@ -3,13 +3,48 @@ import re
 import sqlite3
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Protocol
+
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+except ImportError:
+    psycopg2 = None
+    RealDictCursor = None
 
 
 DB_PATH = Path(
     os.getenv("DATABASE_PATH")
     or Path(__file__).with_name("presence_scan.db")
 )
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+# Local SQLite is the responsive working copy whenever remote credentials exist.
+LOCAL_PRIMARY = os.getenv("LOCAL_PRIMARY", "1").strip().lower() in {"1", "true", "yes", "on"}
+DATABASE_PARAMETERS = {
+    "host": os.getenv("DB_HOST") or os.getenv("DATABASE_HOST"),
+    "port": os.getenv("DB_PORT") or os.getenv("DATABASE_PORT", "5432"),
+    "dbname": os.getenv("DB_NAME") or os.getenv("DATABASE_NAME"),
+    "user": os.getenv("DB_USER") or os.getenv("DATABASE_USER"),
+    "password": os.getenv("DB_PASSWORD") or os.getenv("DATABASE_PASSWORD"),
+}
+
+
+def _has_database_parameters() -> bool:
+    return bool(
+        DATABASE_PARAMETERS["host"]
+        and DATABASE_PARAMETERS["dbname"]
+        and DATABASE_PARAMETERS["user"]
+        and DATABASE_PARAMETERS["password"]
+    )
+
+
+class DatabaseConnection(Protocol):
+    """Common connection operations used by both database backends."""
+
+    def cursor(self) -> Any: ...
+    def commit(self) -> Any: ...
+    def rollback(self) -> Any: ...
+    def close(self) -> Any: ...
 
 
 def _register_sqlite_adapters() -> None:
@@ -24,7 +59,9 @@ def _register_sqlite_adapters() -> None:
     )
     sqlite3.register_converter(
         "TIME",
-        lambda value: datetime.strptime(value.decode(), "%H:%M:%S").time(),
+        lambda value: datetime.strptime(
+            value.decode(), "%H:%M:%S" if value.decode().count(":") == 2 else "%H:%M"
+        ).time(),
     )
 
 
@@ -32,34 +69,54 @@ _register_sqlite_adapters()
 
 
 def init_db_pool(dsn: Optional[str] = None) -> None:
-    """Prepare the local sqlite database file used by the app."""
+    """Prepare the configured database backend."""
 
-    # ``dsn`` is accepted for compatibility with older launchers, but the app
-    # now uses a local sqlite database by default.
+    global DATABASE_URL
+    if dsn:
+        DATABASE_URL = dsn.strip()
+    if (DATABASE_URL or _has_database_parameters()) and not LOCAL_PRIMARY:
+        if psycopg2 is None:
+            raise RuntimeError("DATABASE_URL is set but psycopg2-binary is not installed")
+        return
+
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not DB_PATH.exists():
         DB_PATH.touch()
 
 
-def _connect() -> sqlite3.Connection:
+def _connect() -> DatabaseConnection:
     init_db_pool()
+    if DATABASE_URL and not LOCAL_PRIMARY:
+        assert psycopg2 is not None
+        assert RealDictCursor is not None
+        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    if _has_database_parameters() and not LOCAL_PRIMARY:
+        assert psycopg2 is not None
+        assert RealDictCursor is not None
+        return psycopg2.connect(
+            **DATABASE_PARAMETERS,
+            sslmode=os.getenv("DB_SSLMODE", "require"),
+            cursor_factory=RealDictCursor,
+        )
+
     conn = sqlite3.connect(
         DB_PATH,
         detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
     )
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    if not is_postgres():
+        conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
-def get_connection():
-    """Open a new connection to the local sqlite database."""
+def get_connection() -> DatabaseConnection:
+    """Open a connection to PostgreSQL or the local SQLite fallback."""
 
     return _connect()
 
 
-def release_connection(conn) -> None:
-    """Close a sqlite connection obtained from get_connection()."""
+def release_connection(conn: DatabaseConnection) -> None:
+    """Close a connection obtained from get_connection()."""
 
     if conn is not None:
         conn.close()
@@ -69,6 +126,10 @@ def close_pool() -> None:
     """Compatibility no-op for the old pooled connection API."""
 
     return None
+
+
+def is_postgres() -> bool:
+    return bool((DATABASE_URL or _has_database_parameters()) and not LOCAL_PRIMARY)
 
 
 class _SQLiteRow(dict):
@@ -83,7 +144,7 @@ def _convert_placeholders(sql: str) -> str:
 
 
 class SQLiteCursorContext:
-    """Context manager that yields a sqlite cursor with dict-like rows."""
+    """Context manager that yields a cursor with dict-like rows."""
 
     def __init__(self, commit: bool = True):
         self._commit = commit
@@ -112,24 +173,34 @@ class SQLiteCursorContext:
 
     def execute(self, sql, params=()):
         assert self._cur is not None
+        if is_postgres():
+            return self._cur.execute(sql, params)
         return self._cur.execute(_convert_placeholders(sql), params)
 
     def executemany(self, sql, seq_of_params):
         assert self._cur is not None
+        if is_postgres():
+            return self._cur.executemany(sql, seq_of_params)
         return self._cur.executemany(_convert_placeholders(sql), seq_of_params)
 
     def fetchone(self):
         assert self._cur is not None
         row = self._cur.fetchone()
+        if is_postgres():
+            return row
         return _SQLiteRow(dict(row)) if row is not None else None
 
     def fetchall(self):
         assert self._cur is not None
+        if is_postgres():
+            return self._cur.fetchall()
         return [_SQLiteRow(dict(row)) for row in self._cur.fetchall()]
 
     @property
     def lastrowid(self):
         assert self._cur is not None
+        if is_postgres():
+            return None
         return self._cur.lastrowid
 
     def close(self) -> None:

@@ -32,4 +32,5 @@ dist/
 # Local data / reports (optional – comment out if you want tracked)
 qr_attendance_system/reports/
 qr_attendance_system/qr_codes/
+qr_attendance_system/database/attendance_cache.db
 

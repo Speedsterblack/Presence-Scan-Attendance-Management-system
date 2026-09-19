@@ -396,12 +396,14 @@ class CourseUI:
 
         current_filter = tk.StringVar(master=win, value='all')
 
-        cols = ('course_code', 'course_name', 'lecturer', 'hours', 'start', 'end', 'grace_min')
+        cols = ('course_code', 'course_name', 'lecturer', 'class_day', 'schedule', 'hours', 'grace_min')
         table_wrap = tk.Frame(win)
         table_wrap.pack(fill='both', expand=True, padx=10, pady=4)
         tree = ttk.Treeview(table_wrap, columns=cols, show='headings', selectmode='browse')
         for c in cols:
             heading_text = c.replace('_', ' ').title()
+            if c == 'class_day':
+                heading_text = 'Class Day'
             if heading_text.endswith(' Min'):
                 heading_text = 'Grace (min)'
             tree.heading(c, text=heading_text, anchor='w')
@@ -411,10 +413,12 @@ class CourseUI:
                 tree.column(c, width=320, minwidth=220, anchor='w', stretch=True)
             elif c == 'lecturer':
                 tree.column(c, width=200, minwidth=140, anchor='w', stretch=True)
+            elif c == 'class_day':
+                tree.column(c, width=110, minwidth=90, anchor='center', stretch=False)
+            elif c == 'schedule':
+                tree.column(c, width=260, minwidth=180, anchor='w', stretch=True)
             elif c == 'hours':
                 tree.column(c, width=90, minwidth=80, anchor='center', stretch=False)
-            elif c in ('start', 'end'):
-                tree.column(c, width=110, minwidth=90, anchor='center', stretch=False)
             else:
                 tree.column(c, width=110, minwidth=90, anchor='center', stretch=False)
         tree.pack(side='left', fill='both', expand=True)
@@ -459,32 +463,34 @@ class CourseUI:
             grace_val = r[5] if len(r) > 5 else 0
             lecturer_name = lec_map.get(str(lecturer_id), str(lecturer_id) or '')
 
-            # derive a simple start/end summary from the timetable
-            start_disp = ''
-            end_disp = ''
+            # Preserve every timetable slot as a paired day/time schedule.
+            day_disp = ''
+            schedule_disp = ''
             if get_timetable_for_course is not None:
                 try:
                     trows = get_timetable_for_course(code)
                     if trows:
-                        # use earliest start and latest end across all days
-                        starts = [tr[1] for tr in trows]
-                        ends = [tr[2] for tr in trows]
-                        start_disp = min(starts)
-                        end_disp = max(ends)
+                        day_disp = ', '.join(dict.fromkeys(str(tr[0]) for tr in trows))
+                        slots = []
+                        for day, start, end in trows:
+                            start_text = str(start).rsplit(':', 1)[0] if str(start).count(':') == 2 else str(start)
+                            end_text = str(end).rsplit(':', 1)[0] if str(end).count(':') == 2 else str(end)
+                            slots.append(f'{day} {start_text}-{end_text}')
+                        schedule_disp = '; '.join(slots)
                 except Exception:
-                    start_disp = ''
-                    end_disp = ''
+                    day_disp = ''
+                    schedule_disp = ''
 
-            txt = f"{code} - {name} ({lecturer_name}, {hours_val}h, {start_disp}-{end_disp}, grace {grace_val}m)"
-            master_items.append((code, name, lecturer_name, hours_val, start_disp, end_disp, grace_val, txt))
-            tree.insert('', 'end', values=(code, name, lecturer_name, hours_val, start_disp, end_disp, grace_val))
+            txt = f"{code} - {name} ({lecturer_name}, {schedule_disp}, {hours_val}h, grace {grace_val}m)"
+            master_items.append((code, name, lecturer_name, day_disp, schedule_disp, hours_val, grace_val, txt))
+            tree.insert('', 'end', values=(code, name, lecturer_name, day_disp, schedule_disp, hours_val, grace_val))
 
-        def _passes_quick_filter(code, name, lecturer_name, hours, start_disp, end_disp, grace_val):
+        def _passes_quick_filter(code, name, lecturer_name, hours, schedule_disp, grace_val):
             mode = current_filter.get()
             if mode == 'with_tt':
-                return bool(start_disp and end_disp)
+                return bool(schedule_disp)
             if mode == 'without_tt':
-                return not (start_disp and end_disp)
+                return not schedule_disp
             if mode == 'high_credit':
                 try:
                     return int(hours or 0) >= 4
@@ -501,9 +507,9 @@ class CourseUI:
             q = search_var.get().strip().lower()
             tree.delete(*tree.get_children())
             visible = 0
-            for code, name, lecturer_name, hours, start_disp, end_disp, grace_val, txt in master_items:
-                if _passes_quick_filter(code, name, lecturer_name, hours, start_disp, end_disp, grace_val) and (not q or q in txt.lower()):
-                    tree.insert('', 'end', values=(code, name, lecturer_name, hours, start_disp, end_disp, grace_val))
+            for code, name, lecturer_name, day_disp, schedule_disp, hours, grace_val, txt in master_items:
+                if _passes_quick_filter(code, name, lecturer_name, hours, schedule_disp, grace_val) and (not q or q in txt.lower()):
+                    tree.insert('', 'end', values=(code, name, lecturer_name, day_disp, schedule_disp, hours, grace_val))
                     visible += 1
             count_var.set(f'{visible} course(s)')
 
@@ -629,9 +635,9 @@ class CourseUI:
             try:
                 with open(path, 'w', newline='', encoding='utf-8') as f:
                     w = csv.writer(f)
-                    w.writerow(['course_code','course_name','lecturer','hours','start','end','grace_min'])
+                    w.writerow(['course_code','course_name','lecturer','class_day','schedule','hours','grace_min'])
                     for vals in rows_to_export:
-                        w.writerow(vals[:7])
+                        w.writerow(vals)
                 messagebox.showinfo('Export', f'Exported {len(rows_to_export)} rows to {path}')
             except Exception as e:
                 messagebox.showerror('Error', f'Export failed:\n{e}')
@@ -785,15 +791,13 @@ class CourseUI:
                     update_course_with_timetable(code, new_name, new_lid, hours_val, grace_val, day_entries)
 
                     # Update current row and in-memory filter source so search stays accurate.
-                    starts = [s for _d, s, _e in day_entries]
-                    ends = [e for _d, _s, e in day_entries]
-                    start_disp = min(starts) if starts else ''
-                    end_disp = max(ends) if ends else ''
-                    tree.item(sel[0], values=(code, new_name, selected_lec_name, hours_val, start_disp, end_disp, grace_val))
+                    day_disp = ', '.join(dict.fromkeys(d for d, _s, _e in day_entries))
+                    schedule_disp = '; '.join(f'{d} {s}-{e}' for d, s, e in day_entries)
+                    tree.item(sel[0], values=(code, new_name, selected_lec_name, day_disp, schedule_disp, hours_val, grace_val))
                     for idx, item in enumerate(master_items):
                         if item[0] == code:
-                            txt = f"{code} - {new_name} ({selected_lec_name}, {hours_val}h, {start_disp}-{end_disp}, grace {grace_val}m)"
-                            master_items[idx] = (code, new_name, selected_lec_name, hours_val, start_disp, end_disp, grace_val, txt)
+                            txt = f"{code} - {new_name} ({selected_lec_name}, {schedule_disp}, {hours_val}h, grace {grace_val}m)"
+                            master_items[idx] = (code, new_name, selected_lec_name, day_disp, schedule_disp, hours_val, grace_val, txt)
                             break
                     messagebox.showinfo('Saved', 'Course updated')
                     ed.destroy()
@@ -1132,10 +1136,17 @@ class CourseUI:
                     reader.fieldnames = [fn.lstrip('\ufeff') if fn else fn for fn in reader.fieldnames]
                 for i, row in enumerate(reader, start=1):
                     code = (row.get('course_code') or row.get('code') or '').strip()
-                    name = (row.get('course_name') or row.get('name') or '').strip()
+                    name = (row.get('course_name') or row.get('course_title') or row.get('name') or '').strip()
                     lecturer = (row.get('lecturer_id') or row.get('lecturer') or '').strip()
                     hours = (row.get('credit_hours') or row.get('hours') or '').strip()
+                    grace = (row.get('grace_minutes') or row.get('grace') or '0').strip()
                     timetable_cell = row.get('timetable') or row.get('schedule') or ''
+                    if not timetable_cell:
+                        day = (row.get('day_of_week') or row.get('day') or '').strip()
+                        start = (row.get('start_time') or '').strip()
+                        end = (row.get('end_time') or '').strip()
+                        if day or start or end:
+                            timetable_cell = f'{day}|{start}|{end}'
 
                     if not (code and name and lecturer and hours):
                         # skip incomplete rows but collect info for reporting
@@ -1148,8 +1159,16 @@ class CourseUI:
                         parsed.append((False, i, code, name, 'invalid credit_hours'))
                         continue
 
+                    try:
+                        grace_i = int(grace or '0')
+                        if grace_i < 0:
+                            raise ValueError
+                    except Exception:
+                        parsed.append((False, i, code, name, 'invalid grace_minutes'))
+                        continue
+
                     tt = self._parse_timetable_field(timetable_cell)
-                    parsed.append((True, i, code, name, lecturer, hours_i, tt))
+                    parsed.append((True, i, code, name, lecturer, hours_i, grace_i, tt))
 
             if dry_run:
                 return parsed
@@ -1189,7 +1208,7 @@ class CourseUI:
         # populate tree
         for item in parsed:
             if item[0]:
-                _, i, code, name, lecturer, hours_i, tt = item
+                _, i, code, name, lecturer, hours_i, grace_i, tt = item
                 tt_str = ';'.join([f"{d}|{s}|{e}" for (d,s,e) in tt]) if tt else ''
                 tree.insert('', 'end', values=(i, code, name, lecturer, hours_i, tt_str))
             else:
@@ -1259,12 +1278,16 @@ class CourseUI:
                     first_start = tt[0][1] if tt else ''
                     first_end = tt[0][2] if tt else ''
                     # delegate validation and persistence to the service layer
+                    grace_i = int(next(
+                        item[6] for item in parsed
+                        if item[0] and str(item[1]) == str(vals[0])
+                    ))
                     create_course_with_timetable(
                         code,
                         name,
                         lect_id,
                         int(hours_i),
-                        0,
+                        grace_i,
                         tt,
                     )
                     success += 1

@@ -92,15 +92,28 @@ def validate_credit_hours_against_timetable(
 ) -> None:
     """Validate credit hours and timetable time ranges.
 
-    Credit hours must be positive. Timetable slots must have end times
-    strictly after start times. There is intentionally no requirement
-    that weekly timetable duration equals credit hours.
+    Credit hours must be positive. The combined duration of all timetable
+    slots in the week must equal the course credit-hour value, and each slot's
+    end time must be after its start time.
     """
 
     if credit_hours <= 0:
         raise ValueError("Credit hours must be a positive integer")
 
-    compute_total_weekly_minutes(entries)
+    expected_minutes = credit_hours * 60
+    total_minutes = 0
+    for day, start, end in entries:
+        duration_minutes = _to_minutes(end) - _to_minutes(start)
+        if duration_minutes <= 0:
+            raise ValueError(f"End time must be after start time for {day}")
+        total_minutes += duration_minutes
+
+    if total_minutes != expected_minutes:
+        actual_hours = total_minutes / 60
+        raise ValueError(
+            f"Total weekly class duration is {actual_hours:g} hour(s); "
+            f"it must equal {credit_hours} credit hour(s)"
+        )
 
 
 def get_current_admin_department_id() -> Optional[int]:

@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Tuple
 
-from database.db_config import get_cursor
+from database.db_config import get_cursor, is_postgres
 from database.hod_db import get_hod_department
 from utils.security import hash_password, is_hashed_password, verify_password
 from utils import session
@@ -21,7 +21,13 @@ def _init_schema_metadata() -> None:
         return
 
     with get_cursor() as cursor:
-        cursor.execute("PRAGMA table_info(lecturers)")
+        if is_postgres():
+            cursor.execute(
+                "SELECT column_name AS name FROM information_schema.columns "
+                "WHERE table_schema = current_schema() AND table_name = 'lecturers'"
+            )
+        else:
+            cursor.execute("PRAGMA table_info(lecturers)")
         columns = {row["name"] for row in cursor.fetchall()}
 
         _HAS_DEPARTMENT_FK = "department_id" in columns
@@ -75,9 +81,11 @@ def add_lecturer(username: str, full_name: str, password: str, role: str = "lect
     _init_schema_metadata()
 
     username = _norm_user_id(username)
-    password_hash = hash_password(password)
+    effective_role = (role or "lecturer").strip() or "lecturer"
+    if effective_role.lower() != "admin" and (not username.isdigit() or not 6 <= len(username) <= 8):
+        raise ValueError("Lecturer ID must contain 6 to 8 digits")
 
-    effective_role = role or "lecturer"
+    password_hash = hash_password(password)
 
     columns = [_USER_COLUMN, _NAME_COLUMN, "password", "role"]
     # use a loosely-typed list so inserting an int department_id doesn't upset type checkers

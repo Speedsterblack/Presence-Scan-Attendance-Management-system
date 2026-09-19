@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, date
 from database.db_config import get_cursor
 from database.semester_db import get_active_semester_id, ensure_active_semester
 from database import special_days_db
+from database import attendance_cache
 
 
 # attendance table from db_init.py:
@@ -24,9 +25,14 @@ def get_attendance_by_course(course_code: str, for_date: date | None = None) -> 
     if for_date is None:
         for_date = date.today()
 
-    semester_id = get_active_semester_id(create_if_missing=True)
-    if semester_id is None:
-        semester_id = int(ensure_active_semester()["semester_id"])
+    try:
+        semester_id = get_active_semester_id(create_if_missing=True)
+        if semester_id is None:
+            semester_id = int(ensure_active_semester()["semester_id"])
+    except Exception:
+        semester_id = attendance_cache.get_cached_semester_id()
+        if semester_id is None:
+            return []
 
     with get_cursor(commit=False) as cursor:
         cursor.execute(
@@ -57,9 +63,14 @@ def mark_attendance(student_id: str, course_code: str):
 
     now = datetime.now()
     today = now.date()
-    semester_id = get_active_semester_id(create_if_missing=True)
-    if semester_id is None:
-        semester_id = int(ensure_active_semester()["semester_id"])
+    try:
+        semester_id = get_active_semester_id(create_if_missing=True)
+        if semester_id is None:
+            semester_id = int(ensure_active_semester()["semester_id"])
+    except Exception:
+        semester_id = attendance_cache.get_cached_semester_id()
+        if semester_id is None:
+            return False, "The database is unavailable and no active semester is cached locally."
 
     # Block attendance entirely on no-school special days (for
     # example, holidays or institutional events). This keeps the
@@ -68,18 +79,26 @@ def mark_attendance(student_id: str, course_code: str):
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     day_name = day_names[now.weekday()]
 
-    with get_cursor() as cursor:
-        # resolve course_id and grace_minutes
-        cursor.execute(
-            "SELECT course_id, grace_minutes, department_id FROM courses WHERE course_code = %s",
-            (course_code,),
-        )
-        row = cursor.fetchone()
+    offline_session = None
+    try:
+        with get_cursor() as cursor:
+            cursor.execute(
+                "SELECT course_id, grace_minutes, department_id FROM courses WHERE course_code = %s",
+                (course_code,),
+            )
+            row = cursor.fetchone()
         if not row:
             raise ValueError(f"No course found with code {course_code}")
         course_id = row["course_id"]
         grace_minutes = int(row.get("grace_minutes", 0)) if hasattr(row, "get") else int(row[1])
         course_department_id = row.get("department_id") if hasattr(row, "get") else None
+    except Exception:
+        offline_session = attendance_cache.get_offline_session(course_code, day_names[now.weekday()], now.time())
+        if offline_session is None:
+            return False, "The database is unavailable and this course is not cached locally."
+        course_id = offline_session["course_id"]
+        grace_minutes = int(offline_session["grace_minutes"] or 0)
+        course_department_id = offline_session["department_id"]
 
     # Block attendance entirely on no-school special days for the
     # course's department.
@@ -90,6 +109,22 @@ def mark_attendance(student_id: str, course_code: str):
         # If anything goes wrong while checking special days,
         # fall back to normal behaviour instead of crashing.
         pass
+
+    if offline_session is not None:
+        timetable_id = offline_session["timetable_id"]
+        start_time = offline_session["start_time"]
+        end_time = offline_session["end_time"]
+        if attendance_cache.has_attendance(timetable_id, student_id, semester_id, today):
+            remaining = max(timedelta(0), datetime.combine(today, end_time) - now)
+            return False, f"Attendance already recorded for this session. {remaining} remaining in class."
+        start_dt = datetime.combine(today, start_time)
+        end_dt = datetime.combine(today, end_time)
+        cutoff_dt = min(end_dt, start_dt + timedelta(minutes=grace_minutes))
+        status = "Late" if now > cutoff_dt else "Present"
+        attendance_cache.store_attendance(
+            timetable_id, student_id, semester_id, today, status, synced=False
+        )
+        return True, "Attendance saved locally and will sync when the connection returns."
 
     with get_cursor() as cursor:
         # find the timetable entry for this course that is currently in session
@@ -142,11 +177,31 @@ def mark_attendance(student_id: str, course_code: str):
             return False, f"Attendance already recorded for this session. {remaining} remaining in class."
 
         # insert attendance as Present
-        cursor.execute(
-            "INSERT INTO attendance (timetable_id, student_id, semester_id, status, attendance_date)\n"
-            "VALUES (%s, %s, %s, %s, CURRENT_DATE)",
-            (timetable_id, student_id, semester_id, status),
-        )
+        try:
+            cursor.execute(
+                "INSERT INTO attendance (timetable_id, student_id, semester_id, status, attendance_date)\n"
+                "VALUES (%s, %s, %s, %s, CURRENT_DATE)",
+                (timetable_id, student_id, semester_id, status),
+            )
+        except Exception:
+            attendance_cache.store_attendance(
+                timetable_id,
+                student_id,
+                semester_id,
+                today,
+                status,
+                synced=False,
+            )
+            return True, "Attendance saved locally and will sync when the connection returns."
+
+    attendance_cache.store_attendance(
+        timetable_id,
+        student_id,
+        semester_id,
+        today,
+        status,
+        synced=True,
+    )
 
     # After inserting attendance, check whether the semester should be closed.
     try:

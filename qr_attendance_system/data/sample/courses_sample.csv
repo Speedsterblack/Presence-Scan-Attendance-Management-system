@@ -1,0 +1,6 @@
+course_code,course_title,lecturer_id,credit_hours,grace_minutes,day_of_week,start_time,end_time
+CSC101,Introduction to Computing,240001,3,5,Mon,08:00,11:00
+CSC201,Data Structures,240002,3,5,Tue,10:00,13:00
+CSC301,Database Systems,240003,3,10,Wed,08:00,11:00
+ICT202,Networking Fundamentals,240004,3,5,Thu,13:00,16:00
+ICT401,Information Systems Project,240005,3,10,Fri,10:00,13:00

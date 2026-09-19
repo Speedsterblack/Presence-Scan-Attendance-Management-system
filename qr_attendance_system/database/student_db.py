@@ -22,6 +22,10 @@ def add_student(student_id: str, name: str, Department: str, level: str) -> None
     Department/level anymore.
     """
 
+    student_id = str(student_id or "").strip()
+    if not student_id.isdigit() or len(student_id) != 8:
+        raise ValueError("Student ID must contain exactly 8 digits")
+
     qr_val = student_id
     with get_cursor() as cursor:
         cursor.execute(

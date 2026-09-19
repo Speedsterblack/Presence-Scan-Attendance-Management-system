@@ -1,12 +1,12 @@
 @echo off
 REM Launcher for a single university's Presence Scan app.
-REM The app now creates a local sqlite database automatically, so no
-REM PostgreSQL connection string is required.
+REM Set DATABASE_URL below to use Supabase PostgreSQL. Leave it commented to
+REM use the local SQLite database.
 
 REM Always run from the folder where this script lives (project root)
 cd /d "%~dp0"
 
-REM set DATABASE_URL=postgresql://postgres:Speedster@localhost:5432/Presence_Scan
+REM set DATABASE_URL=postgresql://postgres:<password>@<project-ref>.pooler.supabase.com:6543/postgres?sslmode=require
 
 call ".venv\Scripts\activate.bat"
 

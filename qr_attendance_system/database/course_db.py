@@ -16,7 +16,7 @@ from utils import session
 def add_course(
     course_code: str,
     title: str,
-    _unused,
+    _unused_lecturer_id: Optional[str],
     credit_hours: int,
     lecturer_name: str,
     grace_minutes: int = 0,
@@ -97,7 +97,7 @@ def get_course(course_code: str) -> Optional[Tuple[str, str, int, str, int, int]
 def update_course(
     course_code: str,
     title: str,
-    _unused,
+    _unused_lecturer_id: Optional[str],
     credit_hours: int,
     lecturer_name: str,
     grace_minutes: Optional[int] = None,

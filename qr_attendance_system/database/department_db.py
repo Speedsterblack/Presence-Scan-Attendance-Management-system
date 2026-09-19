@@ -1,7 +1,6 @@
 from typing import List, Optional, Tuple
 
 from database.db_config import get_cursor
-from database.university_db import get_single_university_id
 
 
 # departments table from db_init.py:
@@ -12,16 +11,12 @@ from database.university_db import get_single_university_id
 
 
 def add_department(code: str, name: str, university_id: int) -> int:
-    """Create a new department for the single university in this database.
-
-    ``code`` is the human-readable Department ID (string).
-    """
-    single_university_id = get_single_university_id()
+    """Create a department under the selected university."""
     with get_cursor() as cursor:
         cursor.execute(
             "INSERT INTO departments (department_code, department_name, university_id) "
             "VALUES (%s, %s, %s) RETURNING department_id",
-            (code, name, single_university_id),
+            (code, name, university_id),
         )
         row = cursor.fetchone()
 
@@ -31,12 +26,10 @@ def add_department(code: str, name: str, university_id: int) -> int:
 
 def get_all_departments() -> List[Tuple[int, str | None, str, int]]:
     """Return all departments as (id, code, name, university_id)."""
-    single_university_id = get_single_university_id()
     with get_cursor(commit=False) as cursor:
         cursor.execute(
-            "SELECT department_id, department_code, department_name, %s AS university_id "
+            "SELECT department_id, department_code, department_name, university_id "
             "FROM departments ORDER BY department_name",
-            (single_university_id,),
         )
         rows = cursor.fetchall()
 
@@ -53,12 +46,11 @@ def get_all_departments() -> List[Tuple[int, str | None, str, int]]:
 
 def get_department(department_id: int) -> Optional[Tuple[int, str | None, str, int]]:
     """Fetch a single department by its id."""
-    single_university_id = get_single_university_id()
     with get_cursor(commit=False) as cursor:
         cursor.execute(
-            "SELECT department_id, department_code, department_name, %s AS university_id "
+            "SELECT department_id, department_code, department_name, university_id "
             "FROM departments WHERE department_id = %s",
-            (single_university_id, department_id),
+            (department_id,),
         )
         r = cursor.fetchone()
 
@@ -74,13 +66,12 @@ def get_department(department_id: int) -> Optional[Tuple[int, str | None, str, i
 
 
 def update_department(department_id: int, code: str, name: str, university_id: int) -> None:
-    """Update an existing department's code/name in single-school mode."""
-    single_university_id = get_single_university_id()
+    """Update an existing department and its university."""
     with get_cursor() as cursor:
         cursor.execute(
             "UPDATE departments SET department_code = %s, department_name = %s, university_id = %s "
             "WHERE department_id = %s",
-            (code, name, single_university_id, department_id),
+            (code, name, university_id, department_id),
         )
 
 

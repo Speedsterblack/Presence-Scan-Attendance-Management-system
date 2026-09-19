@@ -14,6 +14,8 @@ import tkinter as tk
 from tkinter import messagebox
 
 from config import settings as app_settings
+from database.db_init import create_tables
+from database import passive_sync
 from ui.institution_setup_ui import InstitutionSetupUI
 from ui.assets_utils import get_logo_image
 from ui import styles as ui_styles
@@ -130,6 +132,8 @@ def _show_developer_login_dialog() -> str | None:
 
 
 def main() -> None:
+    create_tables()
+    passive_sync.start()
     root = tk.Tk()
     root.withdraw()
 
