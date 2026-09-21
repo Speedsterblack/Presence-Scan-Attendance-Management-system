@@ -16,10 +16,9 @@ from database import attendance_cache
 # UNIQUE (timetable_id, student_id)
 
 def get_attendance_by_course(course_code: str, for_date: date | None = None) -> List[Tuple[str, str, str, str]]:
-    """Return attendance records for a given course code.
+    """Return registered students and their attendance status for a course.
 
-    Returns list of (student_id, student_name, course_code, status) for
-    the given date (defaults to today).
+    Students without a record for the given date are returned as ``Absent``.
     """
 
     if for_date is None:
@@ -36,15 +35,30 @@ def get_attendance_by_course(course_code: str, for_date: date | None = None) -> 
 
     with get_cursor(commit=False) as cursor:
         cursor.execute(
-            "SELECT c.course_code, a.student_id, s.student_name, a.status\n"
-            "FROM attendance a\n"
-            "JOIN timetable t ON a.timetable_id = t.timetable_id\n"
-            "JOIN courses c ON t.course_id = c.course_id\n"
-            "JOIN students s ON a.student_id = s.student_id\n"
+            "SELECT s.student_id, s.student_name, c.course_code,\n"
+            "       CASE MAX(CASE WHEN a.status = 'Present' THEN 2\n"
+            "                     WHEN a.status = 'Late' THEN 1\n"
+            "                     ELSE 0 END)\n"
+            "         WHEN 2 THEN 'Present'\n"
+            "         WHEN 1 THEN 'Late'\n"
+            "         ELSE 'Absent' END AS status\n"
+            "FROM course_registrations cr\n"
+            "JOIN students s ON cr.student_id = s.student_id\n"
+            "JOIN courses c ON cr.course_id = c.course_id\n"
+            "LEFT JOIN attendance a\n"
+            "  ON a.student_id = s.student_id\n"
+            " AND a.attendance_date = %s\n"
+            " AND a.semester_id = %s\n"
+            " AND EXISTS (\n"
+            "     SELECT 1 FROM timetable t\n"
+            "     WHERE t.timetable_id = a.timetable_id\n"
+            "       AND t.course_id = c.course_id\n"
+            " )\n"
             "WHERE c.course_code = %s\n"
-            "  AND a.attendance_date = %s\n"
-            "  AND a.semester_id = %s",
-            (course_code, for_date, semester_id),
+            "  AND cr.semester_id = %s\n"
+            "GROUP BY s.student_id, s.student_name, c.course_code\n"
+            "ORDER BY s.student_id",
+            (for_date, semester_id, course_code, semester_id),
         )
         rows = cursor.fetchall()
 

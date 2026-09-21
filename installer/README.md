@@ -1,6 +1,6 @@
 # Presence Scan GUI Installers
 
-This folder contains a real GUI Windows installer setup based on Inno Setup.
+This folder contains two independent GUI Windows installers based on Inno Setup.
 
 ## Files
 
@@ -28,11 +28,18 @@ powershell -ExecutionPolicy Bypass -File .\installer\build_installer.ps1
 
 The generated installer:
 
-- Builds and installs the normal login application.
-- Builds and installs the separate developer institution-setup application.
-- Creates Start Menu shortcuts for each application.
-- Optionally creates a per-user desktop shortcut.
+- The main installer installs only `PresenceScan.exe`.
+- The developer installer installs only `DeveloperPresenceScan.exe`.
+- Both installers can be installed side by side with separate Start Menu shortcuts.
+- Each installer can optionally create its own per-user desktop shortcut.
+- The main installer wizard asks only for the university code and preserves the existing database connection settings.
+- The developer installer wizard can configure the shared database connection and university code for a new machine.
 - Installs into the current user's local application directory so the existing local SQLite database can be written without administrator access.
+- The main app database is at `%LOCALAPPDATA%\Presence Scan\data\presence_scan.db`.
+- The developer app database is at `%LOCALAPPDATA%\Presence Scan Developer\data\presence_scan.db`.
+- Each database is kept outside its installation directory so updates and reinstalls do not remove local data.
+- The build script creates a fresh schema-only SQLite database and both installers include it for new installations.
+- Existing local databases are preserved by the `onlyifdoesntexist` installer flag.
 
 ## Notes
 

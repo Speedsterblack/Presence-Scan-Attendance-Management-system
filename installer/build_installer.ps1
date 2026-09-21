@@ -10,6 +10,37 @@ if (-not $python) {
     throw "Python was not found on PATH. Install Python and activate the project environment first."
 }
 
+$payloadDirectory = Join-Path $PSScriptRoot "payload"
+$seedDatabase = Join-Path $payloadDirectory "presence_scan.db"
+New-Item -ItemType Directory -Force -Path $payloadDirectory | Out-Null
+Remove-Item $seedDatabase -Force -ErrorAction SilentlyContinue
+
+Write-Host "Creating prebuilt SQLite schema database..." -ForegroundColor Cyan
+$previousDatabasePath = $env:DATABASE_PATH
+$previousLocalPrimary = $env:LOCAL_PRIMARY
+$env:DATABASE_PATH = $seedDatabase
+$env:LOCAL_PRIMARY = "1"
+Push-Location (Join-Path $projectRoot "qr_attendance_system")
+try {
+    & $python.Source -m database.db_init
+    if ($LASTEXITCODE -ne 0) {
+        throw "The prebuilt SQLite schema database could not be created."
+    }
+}
+finally {
+    Pop-Location
+    if ($null -eq $previousDatabasePath) {
+        Remove-Item Env:DATABASE_PATH -ErrorAction SilentlyContinue
+    } else {
+        $env:DATABASE_PATH = $previousDatabasePath
+    }
+    if ($null -eq $previousLocalPrimary) {
+        Remove-Item Env:LOCAL_PRIMARY -ErrorAction SilentlyContinue
+    } else {
+        $env:LOCAL_PRIMARY = $previousLocalPrimary
+    }
+}
+
 Push-Location (Join-Path $projectRoot "qr_attendance_system")
 $buildErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'

@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-from database.db_config import get_cursor
+from database.db_config import get_local_cursor
 from utils.security import hash_password, is_hashed_password, verify_password
 
 
@@ -12,7 +12,7 @@ def authenticate_hod(user_id: str, password: str) -> Optional[Tuple[str, str, st
     """
     query = "SELECT hod_id, hod_name, password FROM hods WHERE hod_id = %s"
 
-    with get_cursor(commit=False) as cursor:
+    with get_local_cursor(commit=False) as cursor:
         cursor.execute(query, (user_id,))
         row = cursor.fetchone()
 
@@ -38,7 +38,7 @@ def get_hod_department(hod_id: str) -> Optional[int]:
     """Return the department_id for a given HOD, or None if not found."""
     query = "SELECT department_id FROM hods WHERE hod_id = %s"
 
-    with get_cursor(commit=False) as cursor:
+    with get_local_cursor(commit=False) as cursor:
         cursor.execute(query, (hod_id,))
         row = cursor.fetchone()
 
@@ -54,7 +54,7 @@ def update_password(user_id: str, new_password: str) -> None:
     password_hash = hash_password(new_password)
     query = "UPDATE hods SET password = %s WHERE hod_id = %s"
 
-    with get_cursor() as cursor:
+    with get_local_cursor() as cursor:
         cursor.execute(query, (password_hash, user_id))
 
 
@@ -77,6 +77,6 @@ def upsert_hod_for_department(hod_id: str, hod_name: str, password: str, departm
 
     password_hash = hash_password(password)
 
-    with get_cursor() as cursor:
+    with get_local_cursor() as cursor:
         cursor.execute(query, (hod_id, hod_name, password_hash, department_id))
 

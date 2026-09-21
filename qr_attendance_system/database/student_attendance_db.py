@@ -44,20 +44,16 @@ def _count_observed_sessions(course_code: str, department_id: Optional[int], sem
     with get_cursor(commit=False) as cursor:
         cursor.execute(
             """
-            SELECT MIN(a.attendance_date) AS first_date
-            FROM attendance a
-            JOIN timetable t ON a.timetable_id = t.timetable_id
-            JOIN courses c ON t.course_id = c.course_id
-            WHERE c.course_code = %s
-              AND c.department_id = %s
-                            AND a.semester_id = %s
+            SELECT start_date
+            FROM semesters
+            WHERE semester_id = %s
             """,
-                        (course_code, department_id, semester_id),
+            (semester_id,),
         )
-        first_row = cursor.fetchone() or {}
+        semester_row = cursor.fetchone() or {}
 
-        first_date = first_row.get("first_date")
-        if not first_date:
+        semester_start = semester_row.get("start_date")
+        if not semester_start:
             return 0
 
         cursor.execute(
@@ -86,7 +82,7 @@ def _count_observed_sessions(course_code: str, department_id: Optional[int], sem
         return 0
 
     observed = 0
-    current_day = first_date
+    current_day = semester_start
     today = date.today()
     weekday_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     while current_day <= today:
@@ -341,19 +337,20 @@ def get_student_course_summary(student_id: str) -> List[CourseSummaryRow]:
             # Apply scope constraints to attendance query for defense-in-depth
             attendance_query = """
                 SELECT
-                    COUNT(DISTINCT (a.timetable_id, a.attendance_date)) FILTER (
-                        WHERE a.student_id = %s AND a.status = 'Present'
-                    ) AS present_count,
-                    COUNT(DISTINCT (a.timetable_id, a.attendance_date)) FILTER (
-                        WHERE a.student_id = %s AND a.status = 'Late'
-                    ) AS late_count
+                    COUNT(DISTINCT CASE WHEN a.status = 'Present' THEN
+                        CAST(a.timetable_id AS TEXT) || '|' || CAST(a.attendance_date AS TEXT)
+                    END) AS present_count,
+                    COUNT(DISTINCT CASE WHEN a.status = 'Late' THEN
+                        CAST(a.timetable_id AS TEXT) || '|' || CAST(a.attendance_date AS TEXT)
+                    END) AS late_count
                 FROM attendance a
                 JOIN timetable t ON a.timetable_id = t.timetable_id
                 JOIN courses c ON t.course_id = c.course_id
                 WHERE c.course_code = %s
-                  AND a.semester_id = %s
+                AND a.semester_id = %s
+                AND a.student_id = %s
             """
-            attendance_params = [student_id, student_id, course_code, semester_id]
+            attendance_params = [course_code, semester_id, student_id]
             
             # Enforce scope: admin sees only department courses, lecturer sees only their courses
             if dept_id is not None:

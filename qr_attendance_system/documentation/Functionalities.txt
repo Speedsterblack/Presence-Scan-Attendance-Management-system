@@ -1,0 +1,141 @@
+## Core Attendance
+
+- User login for HOD/admin and lecturers
+- Hashed password storage and password updates
+- Role-based access control
+- QR code generation for students
+- Camera-based QR scanning
+- Mobile phone QR scanning through a local Flask server
+- Present and Late attendance statuses
+- Grace-period handling
+- Duplicate attendance prevention
+- Course/session validation before scanning
+- Offline attendance recording
+- Retry synchronization when the database is unavailable
+- Attendance reports by course and date
+- Registered students displayed as Absent when no attendance exists
+- Semester-based attendance and absence calculations
+- Student attendance lookup by name or ID
+- Per-course attendance summaries
+- Attendance graphs
+- Present, Late, Absent, Observed, and Expected totals
+- Low-attendance course detection
+
+## Student Management
+
+- Add students
+- Update student information
+- Delete students
+- Search students by name or ID
+- Filter students by department and level
+- View student records
+- Preview student QR codes
+- Print student QR codes
+- View student transcript history
+
+## Course Management
+
+- Add courses
+- Update courses
+- Delete courses
+- Assign courses to departments
+- Assign lecturers to courses
+- Set credit hours
+- Set grace periods
+- Configure weekly course timetables
+- Set multiple class days and start/end times
+- Search and view courses
+- Import courses from CSV
+- Undo timetable clearing
+
+## Course Registration
+
+- Register students for courses
+- Unregister students from courses
+- View courses registered by a student
+- View students registered for a course
+- Semester-scoped registrations
+- Re-register course registrations from the previous semester
+
+## Lecturer Management
+
+- Add lecturers
+- Update lecturer profiles
+- Delete lecturers
+- Assign lecturers to departments
+- Assign lecturer roles
+- Reset lecturer passwords
+- Restrict lecturers to their assigned courses
+
+## Institution Management
+
+- Add, update, and delete universities
+- Add, update, and delete departments
+- Assign departments to universities
+- Create HOD/admin accounts for departments
+- Enforce unique university and department identifiers
+- Filter departments by university
+
+## Semester Management
+
+- Create and start semesters
+- Close the active semester
+- Automatically start the next semester
+- Archive closed semesters
+- Preserve historical attendance records
+- Keep registrations semester-specific
+- Configure semester duration in weeks
+- Calculate expected sessions from the semester start date
+- Automatically count missed scheduled sessions as absences
+
+## Special Days
+
+- Add holidays and no-school days
+- Add labels to special days
+- Mark department-specific no-school days
+- Exclude no-school days from attendance calculations
+- Delete special-day records
+
+## Reports and Exports
+
+- Attendance report by course
+- Date navigation for reports
+- Daily attendance student list
+- Attendance summary charts
+- CSV export of attendance summaries
+- Semester archive export
+- Transcript history viewing
+- Audit log viewing
+
+## Dashboard and Administration
+
+- Admin analytics dashboard
+- Attendance totals by course
+- Late-attendance totals
+- Present/Late/Absent breakdowns
+- Date filtering
+- Low-attendance notification banner
+- Theme selection
+- Default attendance grace-period settings
+- Admin PIN management
+- Semester rollover confirmation
+- Audit logging of administrative actions
+- Account settings
+- Logout
+
+## Synchronization and Storage
+
+- Local SQLite database mode
+- PostgreSQL/Supabase support
+- Local-first operation
+- Bidirectional background synchronization
+- Remote rows imported locally
+- Local rows uploaded remotely
+- Retry after network failures
+- Local credentials retained permanently
+- Seven-day cleanup of synchronized attendance cache only
+- Pending unsynchronized attendance retained until synchronization
+- Configurable database and cache locations
+- Windows launcher scripts
+- Developer and standard application installers
+- Inno Setup installer generation

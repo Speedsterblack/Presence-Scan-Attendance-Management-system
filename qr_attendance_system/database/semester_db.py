@@ -31,22 +31,13 @@ def get_active_semester() -> Optional[dict[str, Any]]:
 
 
 def ensure_active_semester(default_name: str = "Semester 1") -> dict[str, Any]:
-    """Return the active semester, creating one if necessary."""
+    """Return the active semester or report that setup is required."""
 
     semester = get_active_semester()
     if semester:
         return semester
 
-    with get_cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO semesters (semester_name, start_date, status) "
-            "VALUES (%s, CURRENT_DATE, 'active') "
-            "RETURNING semester_id, semester_name, start_date, end_date, status, created_at, closed_at",
-            (default_name,),
-        )
-        row = cursor.fetchone()
-
-    return _row_to_dict(row)
+    raise ValueError("No active semester is registered. Create a semester first.")
 
 
 def get_active_semester_id(create_if_missing: bool = True) -> Optional[int]:

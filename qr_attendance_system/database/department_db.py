@@ -69,6 +69,31 @@ def update_department(department_id: int, code: str, name: str, university_id: i
     """Update an existing department and its university."""
     with get_cursor() as cursor:
         cursor.execute(
+            "SELECT department_code, university_id FROM departments WHERE department_id = %s",
+            (department_id,),
+        )
+        current = cursor.fetchone()
+        if current is None:
+            raise ValueError(f"Department {department_id} does not exist")
+
+        if current["department_code"] == code and current["university_id"] == university_id:
+            cursor.execute(
+                "UPDATE departments SET department_name = %s WHERE department_id = %s",
+                (name, department_id),
+            )
+            return
+
+        cursor.execute(
+            "SELECT 1 FROM departments "
+            "WHERE university_id = %s AND department_code = %s AND department_id <> %s",
+            (university_id, code, department_id),
+        )
+        if cursor.fetchone() is not None:
+            raise ValueError(
+                f"Department ID '{code}' already exists in the selected university"
+            )
+
+        cursor.execute(
             "UPDATE departments SET department_code = %s, department_name = %s, university_id = %s "
             "WHERE department_id = %s",
             (code, name, university_id, department_id),

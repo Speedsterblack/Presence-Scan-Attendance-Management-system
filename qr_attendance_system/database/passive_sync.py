@@ -30,6 +30,23 @@ TABLES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("audit_log", "audit_log", ("audit_id",)),
 )
 
+BOOTSTRAP_TABLES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("University", "university", ("university_id",)),
+    ("departments", "departments", ("department_id",)),
+    ("hods", "hods", ("hod_id",)),
+    ("lecturers", "lecturers", ("lecturer_id",)),
+)
+
+
+def _configured_university_code() -> str:
+    return os.getenv("PRESENCE_SCAN_UNIVERSITY_CODE", "").strip()
+
+
+def _sync_all_universities() -> bool:
+    return os.getenv("PRESENCE_SCAN_ALL_UNIVERSITIES", "").strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+
 
 def _local_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(db_config.DB_PATH)
@@ -40,32 +57,117 @@ def _local_connection() -> sqlite3.Connection:
 def _pull_remote_rows(
     local: sqlite3.Connection,
     remote_cursor: Any,
+    tables: tuple[tuple[str, str, tuple[str, ...]], ...] = TABLES,
 ) -> int:
     """Import remote rows that are absent locally without blocking the app."""
 
     imported = 0
-    for local_table, remote_table, primary_keys in TABLES:
-        remote_cursor.execute(f'SELECT * FROM "{remote_table}"')
-        remote_rows = remote_cursor.fetchall()
-        for row in remote_rows:
-            columns = list(row.keys())
-            key_values = tuple(row[key] for key in primary_keys)
-            where_sql = " AND ".join(f'"{key}" = ?' for key in primary_keys)
-            exists = local.execute(
-                f'SELECT 1 FROM "{local_table}" WHERE {where_sql} LIMIT 1',
-                key_values,
-            ).fetchone()
-            if exists:
-                continue
-            column_sql = ", ".join(f'"{column}"' for column in columns)
-            placeholders = ", ".join("?" for _ in columns)
-            local.execute(
-                f'INSERT OR IGNORE INTO "{local_table}" ({column_sql}) VALUES ({placeholders})',
-                tuple(row[column] for column in columns),
-            )
-            imported += 1
+    for local_table, remote_table, primary_keys in tables:
+        try:
+            university_code = _configured_university_code()
+            if local_table == "University" and not _sync_all_universities():
+                if not university_code:
+                    continue
+                remote_cursor.execute(
+                    'SELECT * FROM "university" WHERE university_code = %s',
+                    (university_code,),
+                )
+            elif local_table == "departments" and not _sync_all_universities():
+                if not university_code:
+                    continue
+                remote_cursor.execute(
+                    'SELECT d.* FROM "departments" d '
+                    'JOIN "university" u ON u.university_id = d.university_id '
+                    'WHERE u.university_code = %s',
+                    (university_code,),
+                )
+            elif local_table == "hods":
+                if not university_code and not _sync_all_universities():
+                    continue
+                if _sync_all_universities():
+                    remote_cursor.execute('SELECT * FROM "hods"')
+                else:
+                    remote_cursor.execute(
+                        'SELECT h.* FROM "hods" h '
+                        'JOIN "departments" d ON d.department_id = h.department_id '
+                        'JOIN "university" u ON u.university_id = d.university_id '
+                        'WHERE u.university_code = %s',
+                        (university_code,),
+                    )
+            elif local_table == "lecturers":
+                if not university_code and not _sync_all_universities():
+                    continue
+                if _sync_all_universities():
+                    remote_cursor.execute('SELECT * FROM "lecturers"')
+                else:
+                    remote_cursor.execute(
+                        'SELECT l.* FROM "lecturers" l '
+                        'JOIN "departments" d ON d.department_id = l.department_id '
+                        'JOIN "university" u ON u.university_id = d.university_id '
+                        'WHERE u.university_code = %s',
+                        (university_code,),
+                    )
+            else:
+                remote_cursor.execute(f'SELECT * FROM "{remote_table}"')
+            remote_rows = remote_cursor.fetchall()
+            for row in remote_rows:
+                columns = list(row.keys())
+                key_values = tuple(row[key] for key in primary_keys)
+                where_sql = " AND ".join(f'"{key}" = ?' for key in primary_keys)
+                exists = local.execute(
+                    f'SELECT 1 FROM "{local_table}" WHERE {where_sql} LIMIT 1',
+                    key_values,
+                ).fetchone()
+                if exists:
+                    continue
+                column_sql = ", ".join(f'"{column}"' for column in columns)
+                placeholders = ", ".join("?" for _ in columns)
+                local.execute(
+                    f'INSERT OR IGNORE INTO "{local_table}" ({column_sql}) VALUES ({placeholders})',
+                    tuple(row[column] for column in columns),
+                )
+                imported += 1
+        except Exception:
+            # A missing or incompatible table must not block other tables.
+            remote_cursor.connection.rollback()
+            continue
     local.commit()
     return imported
+
+
+def _connect_remote() -> Any:
+    remote_kwargs: dict[str, Any] = {"cursor_factory": db_config.RealDictCursor}
+    if db_config.DATABASE_URL:
+        return db_config.psycopg2.connect(db_config.DATABASE_URL, **remote_kwargs)
+    return db_config.psycopg2.connect(
+        **db_config.DATABASE_PARAMETERS,
+        sslmode=os.getenv("DB_SSLMODE", "require"),
+        **remote_kwargs,
+    )
+
+
+def sync_credentials_once() -> int:
+    """Import remote credentials before the first login window is shown."""
+
+    if not (db_config.DATABASE_URL or db_config._has_database_parameters()):
+        return 0
+    if db_config.psycopg2 is None or db_config.RealDictCursor is None:
+        return 0
+
+    local = _local_connection()
+    remote = None
+    remote_cursor = None
+    try:
+        remote = _connect_remote()
+        remote_cursor = remote.cursor()
+        imported = _pull_remote_rows(local, remote_cursor, BOOTSTRAP_TABLES)
+        return imported
+    finally:
+        if remote_cursor is not None:
+            remote_cursor.close()
+        local.close()
+        if remote is not None:
+            remote.close()
 
 
 def sync_once() -> int:
@@ -80,27 +182,38 @@ def sync_once() -> int:
     remote = None
     synced_rows = 0
     try:
-        remote_kwargs: dict[str, Any] = {"cursor_factory": db_config.RealDictCursor}
-        if db_config.DATABASE_URL:
-            remote = db_config.psycopg2.connect(db_config.DATABASE_URL, **remote_kwargs)
-        else:
-            remote = db_config.psycopg2.connect(
-                **db_config.DATABASE_PARAMETERS,
-                sslmode=os.getenv("DB_SSLMODE", "require"),
-                **remote_kwargs,
-            )
+        remote = _connect_remote()
 
         remote_cursor = remote.cursor()
         synced_rows = _pull_remote_rows(local, remote_cursor)
         for local_table, remote_table, primary_keys in TABLES:
-            rows = local.execute(f'SELECT * FROM "{local_table}"').fetchall()
+            if local_table in {"hods", "lecturers"}:
+                university_code = _configured_university_code()
+                if not university_code and not _sync_all_universities():
+                    continue
+                if _sync_all_universities():
+                    rows = local.execute(f'SELECT * FROM "{local_table}"').fetchall()
+                else:
+                    rows = local.execute(
+                        f'SELECT source.* FROM "{local_table}" source '
+                        'JOIN "departments" d ON d.department_id = source.department_id '
+                        'JOIN "University" u ON u.university_id = d.university_id '
+                        'WHERE u.university_code = ?',
+                        (university_code,),
+                    ).fetchall()
+            else:
+                rows = local.execute(f'SELECT * FROM "{local_table}"').fetchall()
             if not rows:
                 continue
-            columns = rows[0].keys()
-            column_sql = ", ".join(f'"{column}"' for column in columns)
+            columns = list(rows[0].keys())
+            remote_columns = [
+                "department" if local_table == "students" and column == "Department" else column
+                for column in columns
+            ]
+            column_sql = ", ".join(f'"{column}"' for column in remote_columns)
             placeholders = ", ".join(["%s"] * len(columns))
             conflict_sql = ", ".join(f'"{key}"' for key in primary_keys)
-            update_columns = [column for column in columns if column not in primary_keys]
+            update_columns = [column for column in remote_columns if column not in primary_keys]
             if update_columns:
                 update_sql = ", ".join(
                     f'"{column}" = EXCLUDED."{column}"' for column in update_columns

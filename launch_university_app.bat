@@ -8,6 +8,9 @@ cd /d "%~dp0"
 
 REM set DATABASE_URL=postgresql://postgres:<password>@<project-ref>.pooler.supabase.com:6543/postgres?sslmode=require
 
+REM Keep credentials and offline attendance local while syncing shared data.
+set LOCAL_PRIMARY=1
+
 call ".venv\Scripts\activate.bat"
 
 REM Change into the package folder so "python -m main.main" works

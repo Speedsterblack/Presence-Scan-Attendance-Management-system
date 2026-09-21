@@ -1,6 +1,7 @@
 import os
 import re
 import sqlite3
+import sys
 from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, Optional, Protocol
@@ -13,10 +14,22 @@ except ImportError:
     RealDictCursor = None
 
 
-DB_PATH = Path(
-    os.getenv("DATABASE_PATH")
-    or Path(__file__).with_name("presence_scan.db")
-)
+def _default_database_path() -> Path:
+    """Return a writable database path for the current application."""
+
+    if getattr(sys, "frozen", False):
+        app_data = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA")
+        if app_data:
+            application_name = (
+                "Presence Scan Developer"
+                if Path(sys.executable).stem.lower().startswith("developer")
+                else "Presence Scan"
+            )
+            return Path(app_data) / application_name / "data" / "presence_scan.db"
+    return Path(__file__).with_name("presence_scan.db")
+
+
+DB_PATH = Path(os.getenv("DATABASE_PATH") or _default_database_path())
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 # Local SQLite is the responsive working copy whenever remote credentials exist.
 LOCAL_PRIMARY = os.getenv("LOCAL_PRIMARY", "1").strip().lower() in {"1", "true", "yes", "on"}
@@ -109,6 +122,17 @@ def _connect() -> DatabaseConnection:
     return conn
 
 
+def _connect_local() -> sqlite3.Connection:
+    init_db_pool()
+    conn = sqlite3.connect(
+        DB_PATH,
+        detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+    )
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 def get_connection() -> DatabaseConnection:
     """Open a connection to PostgreSQL or the local SQLite fallback."""
 
@@ -146,13 +170,14 @@ def _convert_placeholders(sql: str) -> str:
 class SQLiteCursorContext:
     """Context manager that yields a cursor with dict-like rows."""
 
-    def __init__(self, commit: bool = True):
+    def __init__(self, commit: bool = True, local: bool = False):
         self._commit = commit
+        self._local = local
         self._conn = None
         self._cur = None
 
     def __enter__(self):
-        self._conn = _connect()
+        self._conn = _connect_local() if self._local else _connect()
         self._cur = self._conn.cursor()
         return self
 
@@ -217,4 +242,10 @@ def get_cursor(commit: bool = True) -> SQLiteCursorContext:
     """
 
     return SQLiteCursorContext(commit)
+
+
+def get_local_cursor(commit: bool = True) -> SQLiteCursorContext:
+    """Return a cursor backed by the local SQLite database."""
+
+    return SQLiteCursorContext(commit, local=True)
 

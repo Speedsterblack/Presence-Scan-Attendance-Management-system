@@ -27,6 +27,40 @@ Keep the connection string in an environment variable or a launcher-specific
 secret store. Do not commit it to the repository. When `DATABASE_URL` is not
 set, the app continues to use its local SQLite database.
 
+## Set up a shared desktop installation
+
+For multiple desktop machines, use one PostgreSQL or Supabase database and
+configure each desktop with the same database connection. From the project
+root, run PowerShell as the installing Windows user:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Set-ExecutionPolicy -Scope Process Bypass
+.\configure_shared_desktop.ps1
+```
+
+The setup script prompts for the database connection, initializes the shared
+schema, and stores the connection values in that Windows user's environment.
+It keeps `LOCAL_PRIMARY=1`, so credentials are read locally and offline
+attendance remains available while the background worker synchronizes shared
+data. It also asks for the university code assigned to that desktop; only HOD
+and lecturer credentials belonging to that university are imported and
+synchronized. Run the script once on every desktop using the same database.
+
+The university code must exactly match the `university_code` value in
+Supabase. For example, if Supabase contains `UG001`, enter `UG001`, not a
+different local code.
+
+The developer installer is institution-wide: it asks for the database
+connection only and synchronizes credentials across all universities.
+The main app creates its own local SQLite database on first launch and imports
+the relevant credentials from Supabase before showing the login screen.
+
+Start the application with `launch_university_app.bat`. Do not commit or
+share the database password.
+
 ## Local-first operation
 
 The app keeps the interface responsive on slow connections by default when

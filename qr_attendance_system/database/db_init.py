@@ -140,31 +140,6 @@ def create_tables() -> None:
             cur.executescript(schema_sql)
 
         cur.execute(
-            "INSERT INTO University (university_id, university_code, university_name) "
-            "VALUES (1, 'SCH001', 'Default University') "
-            "ON CONFLICT DO NOTHING"
-        )
-        cur.execute(
-            "INSERT INTO departments (department_id, department_code, department_name, university_id) "
-            "VALUES (1, 'D001', 'Default Department', 1) "
-            "ON CONFLICT DO NOTHING"
-        )
-
-        cur.execute("SELECT COUNT(*) AS active_count FROM semesters WHERE status = 'active'")
-        active_row = cur.fetchone()
-        active_count = int(active_row["active_count"]) if active_row is not None else 0
-        if active_count == 0:
-            cur.execute(
-                "INSERT INTO semesters (semester_id, semester_name, start_date, status) "
-                "VALUES (1, 'Semester 1', CURRENT_DATE, 'active') "
-                "ON CONFLICT DO NOTHING"
-            )
-            cur.execute(
-                "UPDATE semesters SET status = 'active' "
-                "WHERE semester_id = (SELECT semester_id FROM semesters ORDER BY semester_id LIMIT 1)"
-            )
-
-        cur.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_University_university_code "
             "ON University(university_code)"
         )

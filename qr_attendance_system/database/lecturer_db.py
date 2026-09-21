@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Tuple
 
-from database.db_config import get_cursor, is_postgres
+from database.db_config import get_local_cursor, is_postgres
 from database.hod_db import get_hod_department
 from utils.security import hash_password, is_hashed_password, verify_password
 from utils import session
@@ -20,7 +20,7 @@ def _init_schema_metadata() -> None:
     if _USER_COLUMN is not None and _NAME_COLUMN is not None:
         return
 
-    with get_cursor() as cursor:
+    with get_local_cursor() as cursor:
         if is_postgres():
             cursor.execute(
                 "SELECT column_name AS name FROM information_schema.columns "
@@ -67,7 +67,7 @@ def get_all_lecturers() -> List[Tuple[str, str, str]]:
         params.append(dept_filter)
     query += f" ORDER BY {_USER_COLUMN}"
 
-    with get_cursor(commit=False) as cursor:
+    with get_local_cursor(commit=False) as cursor:
         cursor.execute(query, tuple(params))
         rows = cursor.fetchall()
 
@@ -117,7 +117,7 @@ def add_lecturer(username: str, full_name: str, password: str, role: str = "lect
         DO UPDATE SET {on_conflict_set}
     """
 
-    with get_cursor() as cursor:
+    with get_local_cursor() as cursor:
         cursor.execute(query, tuple(values))
 
 
@@ -133,7 +133,7 @@ def update_lecturer_profile(username: str, full_name: str, role: str = "lecturer
 
     query = f"UPDATE lecturers SET {_NAME_COLUMN} = %s, role = %s WHERE {_USER_COLUMN} = %s"
 
-    with get_cursor() as cursor:
+    with get_local_cursor() as cursor:
         cursor.execute(query, (full_name, effective_role, username))
 
 
@@ -145,7 +145,7 @@ def update_password(username: str, new_password: str) -> None:
 
     query = f"UPDATE lecturers SET password = %s WHERE {_USER_COLUMN} = %s"
 
-    with get_cursor() as cursor:
+    with get_local_cursor() as cursor:
         cursor.execute(query, (password_hash, username))
 
 
@@ -156,7 +156,7 @@ def delete_lecturer(username: str) -> None:
 
     query = f"DELETE FROM lecturers WHERE {_USER_COLUMN} = %s"
 
-    with get_cursor() as cursor:
+    with get_local_cursor() as cursor:
         cursor.execute(query, (username,))
 
 
@@ -174,7 +174,7 @@ def authenticate_user(user_id: str, password: str) -> Optional[Tuple[str, str, s
         WHERE {_USER_COLUMN} = %s
     """
 
-    with get_cursor(commit=False) as cursor:
+    with get_local_cursor(commit=False) as cursor:
         cursor.execute(query, (user_id,))
         row = cursor.fetchone()
 
@@ -210,7 +210,7 @@ def get_lecturer_courses(lecturer_id: str) -> List[str]:
     if not lecturer_id:
         return []
 
-    with get_cursor(commit=False) as cursor:
+    with get_local_cursor(commit=False) as cursor:
         cursor.execute(
             "SELECT course_code FROM courses WHERE lecturer_id = %s ORDER BY course_code",
             (lecturer_id,),

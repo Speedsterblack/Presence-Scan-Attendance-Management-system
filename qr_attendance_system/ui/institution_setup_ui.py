@@ -1,4 +1,5 @@
 import tkinter as tk
+import threading
 from tkinter import ttk, messagebox
 from typing import Union
 
@@ -11,6 +12,8 @@ from database.university_db import (
     update_university,
     delete_university,
 )
+from database import passive_sync
+from database.db_init import create_tables
 from database.department_db import (
     get_all_departments,
     add_department,
@@ -110,9 +113,16 @@ class InstitutionSetupUI:
         tk.Button(
             btnf_left,
             text="Refresh",
-            command=self._load_University,
+            command=self._refresh_universities,
             font=ui_styles.BUTTON_FONT,
             **ui_styles.PRIMARY_BUTTON,
+        ).pack(side="left", padx=6)
+        tk.Button(
+            btnf_left,
+            text="Upload to Supabase",
+            command=self._upload_to_supabase,
+            font=ui_styles.BUTTON_FONT,
+            **ui_styles.SECONDARY_BUTTON,
         ).pack(side="left", padx=6)
         tk.Button(
             btnf_left,
@@ -160,10 +170,51 @@ class InstitutionSetupUI:
         tree.bind("<<TreeviewSelect>>", self._on_uni_select)
         self._load_University()
 
+    def _refresh_universities(self) -> None:
+        """Refresh local rows and request a non-blocking remote pull."""
+        self._load_University()
+
+        def pull_remote() -> None:
+            try:
+                passive_sync.sync_once()
+            finally:
+                self.root.after(100, self._load_University)
+
+        threading.Thread(target=pull_remote, daemon=True).start()
+
+    def _upload_to_supabase(self) -> None:
+        """Push local institution changes to Supabase without blocking Tk."""
+
+        def upload() -> None:
+            try:
+                synced = passive_sync.sync_once()
+            except Exception as error:
+                error_text = str(error)
+                self.root.after(
+                    0,
+                    lambda: messagebox.showerror(
+                        "Supabase upload failed",
+                        f"Could not upload local changes:\n{error_text}",
+                    ),
+                )
+                return
+
+            self.root.after(
+                0,
+                lambda: (self._load_University(), messagebox.showinfo(
+                    "Supabase upload",
+                    f"Synchronization completed. Rows processed: {synced}",
+                )),
+            )
+
+        threading.Thread(target=upload, name="supabase-manual-upload", daemon=True).start()
+
     def _load_University(self) -> None:
         for iid in self.uni_tree.get_children():
             self.uni_tree.delete(iid)
         try:
+            # Repair an empty or older packaged database before reading it.
+            create_tables()
             for uid, code, name in get_all_University():
                 display_code = code or ""
                 self.uni_tree.insert("", "end", values=(display_code, name, uid))
@@ -215,6 +266,8 @@ class InstitutionSetupUI:
             else:
                 add_university(code, name)
             self._load_University()
+            self._refresh_dept_University()
+            self._load_departments()
         except Exception as e:
             messagebox.showerror("Error", f"Could not save university:\n{e}")
 
@@ -231,6 +284,8 @@ class InstitutionSetupUI:
         try:
             delete_university(uid)
             self._load_University()
+            self._refresh_dept_University()
+            self._load_departments()
         except Exception as e:
             messagebox.showerror("Error", f"Could not delete university:\n{e}")
 

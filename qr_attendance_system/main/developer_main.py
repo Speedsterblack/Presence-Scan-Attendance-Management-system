@@ -133,6 +133,12 @@ def _show_developer_login_dialog() -> str | None:
 
 def main() -> None:
     create_tables()
+    try:
+        # Push local institution changes before opening the setup screen.
+        passive_sync.sync_once()
+    except Exception:
+        # Institution setup remains usable while Supabase is unavailable.
+        pass
     passive_sync.start()
     root = tk.Tk()
     root.withdraw()
