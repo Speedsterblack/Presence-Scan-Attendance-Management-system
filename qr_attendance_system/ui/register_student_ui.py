@@ -230,7 +230,6 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
         ('Level 200', 'lvl200', ui_styles.INFO_BUTTON),
         ('Level 300', 'lvl300', ui_styles.SUCCESS_BUTTON),
         ('Level 400', 'lvl400', ui_styles.WARNING_BUTTON),
-        ('No Department', 'no_Department', ui_styles.WARNING_BUTTON),
     ]
     for text, mode, style in chip_specs:
         tk.Button(

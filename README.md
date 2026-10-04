@@ -13,83 +13,32 @@ cd qr_attendance_system
 python -m main.main
 ```
 
-The app uses local SQLite by default. To use Supabase PostgreSQL, set
-`DATABASE_URL` before starting the app and initialize the schema once:
+The app uses a local SQLite database and does not require internet access or an
+online database. All users, courses, registrations, timetables, attendance,
+reports, and institution settings are stored locally on the desktop.
 
-```powershell
-$env:DATABASE_URL = "postgresql://postgres:<password>@<project-ref>.pooler.supabase.com:6543/postgres?sslmode=require"
-cd qr_attendance_system
-python -m database.db_init
-python -m main.main
-```
-
-Keep the connection string in an environment variable or a launcher-specific
-secret store. Do not commit it to the repository. When `DATABASE_URL` is not
-set, the app continues to use its local SQLite database.
-
-## Set up a shared desktop installation
-
-For multiple desktop machines, use one PostgreSQL or Supabase database and
-configure each desktop with the same database connection. From the project
-root, run PowerShell as the installing Windows user:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Set-ExecutionPolicy -Scope Process Bypass
-.\configure_shared_desktop.ps1
-```
-
-The setup script prompts for the database connection, initializes the shared
-schema, and stores the connection values in that Windows user's environment.
-It keeps `LOCAL_PRIMARY=1`, so credentials are read locally and offline
-attendance remains available while the background worker synchronizes shared
-data. It also asks for the university code assigned to that desktop; only HOD
-and lecturer credentials belonging to that university are imported and
-synchronized. Run the script once on every desktop using the same database.
-
-The university code must exactly match the `university_code` value in
-Supabase. For example, if Supabase contains `UG001`, enter `UG001`, not a
-different local code.
-
-The developer installer is institution-wide: it asks for the database
-connection only and synchronizes credentials across all universities.
-The main app creates its own local SQLite database on first launch and imports
-the relevant credentials from Supabase before showing the login screen.
+Each desktop has its own database. To move data between desktops, use the
+existing local export/import tools or copy the database while the application
+is closed. The application does not perform background synchronization.
 
 Start the application with `launch_university_app.bat`. Do not commit or
 share the database password.
 
-## Local-first operation
+## Local network communication
 
-The app keeps the interface responsive on slow connections by default when
-PostgreSQL parameters are configured. It reads and writes local
-SQLite during normal operation. A background worker mirrors local rows to
-Supabase every 5 seconds; network failures are retried on the next cycle and
-never block the UI.
+The optional mobile QR scanner communicates with the desktop over the local
+Wi-Fi or LAN only. Start the scanner from the lecturer screen and open the
+displayed address on a phone connected to the same network. Scanned attendance
+is written directly to the desktop's local SQLite database.
 
-To explicitly control this behavior, set `LOCAL_PRIMARY=1` for local-first
-operation or `LOCAL_PRIMARY=0` to make the configured PostgreSQL database the
-primary connection.
+The phone and desktop do not need internet access. They only need to be on the
+same local network, and Windows Firewall must allow the scanner port.
 
-```powershell
-$env:LOCAL_PRIMARY = "1"
-```
+## Local attendance cache
 
-The local database remains the fast working copy. Synchronization is
-bidirectional for rows that do not already exist on the other side: remote
-rows are imported locally, and local rows are uploaded to Supabase. When both
-databases contain different values for the same primary key, the local row is
-kept to avoid silently overwriting active local data.
-
-## Attendance offline cache
-
-When connected to PostgreSQL, the app keeps a local attendance cache at
-`qr_attendance_system/database/attendance_cache.db`. Failed attendance writes
-are queued there and retried when the app starts with a working connection.
-Successfully synchronized cache rows are removed after seven days. Pending
-rows are retained until they can be synchronized.
+Attendance is written to the desktop database directly. The cache remains as a
+local recovery mechanism for temporary local database failures; it is never
+uploaded or synchronized online.
 
 To change the retention period or cache location, set these environment
 variables before starting the app:
@@ -101,9 +50,9 @@ $env:ATTENDANCE_CACHE_PATH = "C:\path\to\attendance_cache.db"
 
 Only attendance cache data is retained temporarily. Students, courses,
 registrations, semesters, timetables, and other master data remain in the
-Supabase database.
+local SQLite database.
 
-## One-step prototype installer (Windows)
+## Local prototype installer (Windows)
 
 Use the guided installer script from the project root:
 
@@ -115,16 +64,15 @@ What it does:
 
 - Creates `.venv` if needed
 - Installs base + dev dependencies
-- Prompts for PostgreSQL connection values
-- Sets `DATABASE_URL` for setup commands
 - Runs schema initialization (`python -m database.db_init`)
 - Seeds default admin (`python -m scripts.seed_admin`)
-- Rewrites `launch_university_app.bat` with your DB connection
+- Leaves the application configured for local SQLite
 
-Useful flags:
+The installer accepts the existing `-NonInteractive`, `-SkipSeed`, and
+`-SkipRun` flags. Database connection flags are no longer needed.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\install_prototype.ps1 -NonInteractive -DbHost localhost -DbPort 5432 -DbName Presence_Scan -DbUser postgres -DbPassword Speedster
+powershell -ExecutionPolicy Bypass -File .\install_prototype.ps1 -NonInteractive
 ```
 
 Optional flags:

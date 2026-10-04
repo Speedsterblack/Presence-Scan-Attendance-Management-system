@@ -1,5 +1,4 @@
 import tkinter as tk
-import threading
 from tkinter import ttk, messagebox
 from typing import Union
 
@@ -8,12 +7,7 @@ from ui import styles as ui_styles
 from ui.assets_utils import apply_background_image, get_logo_image
 from database.university_db import (
     get_all_University,
-    add_university,
-    update_university,
-    delete_university,
 )
-from database import passive_sync
-from database.db_init import create_tables
 from database.department_db import (
     get_all_departments,
     add_department,
@@ -21,6 +15,7 @@ from database.department_db import (
     delete_department,
 )
 from database.hod_db import upsert_hod_for_department
+from services.head_hub import get_head_hub_url
 
 _THEME = app_settings.get_theme()
 BG_COLOR = _THEME["bg_color"]
@@ -28,7 +23,7 @@ TEXT = _THEME["text_color"]
 
 
 class InstitutionSetupUI:
-    """Manage University and departments.
+    """Manage the head university's details and departments.
 
     HOD/admin accounts are still created in the ``hods`` table
     directly; this screen focuses on the university/department
@@ -43,7 +38,7 @@ class InstitutionSetupUI:
         self.root = root
         self.parent = parent
 
-        self.root.title("Institution Setup")
+        self.root.title("Head of University")
         self.root.configure(bg=BG_COLOR)
         self.root.protocol("WM_DELETE_WINDOW", self._go_back)
 
@@ -55,267 +50,32 @@ class InstitutionSetupUI:
 
         tk.Label(
             self.root,
-            text="Institution Setup",
+            text="Head of University",
             font=ui_styles.SUBTITLE_FONT,
             bg=BG_COLOR,
             fg=TEXT,
         ).pack(pady=4)
+        tk.Label(
+            self.root,
+            text=f"University LAN hub: {get_head_hub_url()}",
+            bg=BG_COLOR,
+            fg=TEXT,
+        ).pack(pady=(0, 4))
 
         notebook = ttk.Notebook(self.root)
         notebook.pack(fill="both", expand=True, padx=8, pady=6)
 
-        self._build_university_tab(notebook)
         self._build_department_tab(notebook)
 
         # Ensure the institution setup window opens at a comfortable,
         # large size similar to the admin dashboard.
         self.root.update_idletasks()
-        # Maximize institution setup window on startup
-        self.root.update_idletasks()
-        self.root.state('zoomed')
-        self.root.minsize(1100, 700)
-
-    # ================= University =================
-
-    def _build_university_tab(self, notebook: ttk.Notebook) -> None:
-        frame = tk.Frame(notebook, bg=BG_COLOR)
-        notebook.add(frame, text="University")
-
-        # Main content split into left (existing list) and right (form),
-        # similar to the Manage Lecturers screen.
-        main = tk.Frame(frame, bg=BG_COLOR)
-        main.pack(fill="both", expand=True, padx=8, pady=6)
-
-        # Left side: existing University list with Refresh/Delete buttons
-        left = tk.Frame(main, bg=BG_COLOR)
-        left.pack(side="left", fill="both", expand=True, padx=(0, 8))
-
-        tk.Label(left, text="Existing University", bg=BG_COLOR, fg=TEXT).pack(anchor="w")
-
-        # columns: human-readable University ID (string), Name, internal numeric id (hidden)
-        tree = ttk.Treeview(
-            left,
-            columns=("code", "name", "internal_id"),
-            show="headings",
-            selectmode="browse",
-        )
-        tree.heading("code", text="University ID", anchor="w")
-        tree.heading("name", text="Name", anchor="w")
-        tree.heading("internal_id", text="", anchor="w")
-        tree.column("code", width=140, anchor="w")
-        tree.column("name", width=260, anchor="w")
-        tree.column("internal_id", width=0, stretch=False)
-        tree.pack(fill="both", expand=True)
-        self.uni_tree = tree
-
-        btnf_left = tk.Frame(left, bg=BG_COLOR)
-        btnf_left.pack(fill="x", pady=6)
-        tk.Button(
-            btnf_left,
-            text="Refresh",
-            command=self._refresh_universities,
-            font=ui_styles.BUTTON_FONT,
-            **ui_styles.PRIMARY_BUTTON,
-        ).pack(side="left", padx=6)
-        tk.Button(
-            btnf_left,
-            text="Upload to Supabase",
-            command=self._upload_to_supabase,
-            font=ui_styles.BUTTON_FONT,
-            **ui_styles.SECONDARY_BUTTON,
-        ).pack(side="left", padx=6)
-        tk.Button(
-            btnf_left,
-            text="Delete",
-            command=self._delete_university,
-            font=ui_styles.BUTTON_FONT,
-            **ui_styles.DANGER_BUTTON,
-        ).pack(side="left", padx=6)
-
-        # Right side: add / update university form
-        right = tk.Frame(main, bg=BG_COLOR)
-        right.pack(side="left", fill="y")
-
-        tk.Label(
-            right,
-            text="Add / Update University",
-            font=ui_styles.SECTION_FONT,
-            bg=BG_COLOR,
-            fg=TEXT,
-        ).pack(anchor="w")
-
-        tk.Label(right, text="University ID", bg=BG_COLOR, fg=TEXT).pack(anchor="w", pady=(8, 0))
-        self.uni_id_e = tk.Entry(right)
-        self.uni_id_e.pack(fill="x")
-
-        tk.Label(right, text="Name", bg=BG_COLOR, fg=TEXT).pack(anchor="w", pady=(8, 0))
-        self.uni_name_e = tk.Entry(right)
-        self.uni_name_e.pack(fill="x")
-
-        tk.Button(
-            right,
-            text="Add University",
-            command=self._add_university_clicked,
-            font=ui_styles.BUTTON_FONT,
-            **ui_styles.PRIMARY_BUTTON,
-        ).pack(pady=8, fill="x")
-        tk.Button(
-            right,
-            text="Update Selected",
-            command=self._update_university_clicked,
-            font=ui_styles.BUTTON_FONT,
-            **ui_styles.SECONDARY_BUTTON,
-        ).pack(pady=(0, 6), fill="x")
-
-        tree.bind("<<TreeviewSelect>>", self._on_uni_select)
-        self._load_University()
-
-    def _refresh_universities(self) -> None:
-        """Refresh local rows and request a non-blocking remote pull."""
-        self._load_University()
-
-        def pull_remote() -> None:
-            try:
-                passive_sync.sync_once()
-            finally:
-                self.root.after(100, self._load_University)
-
-        threading.Thread(target=pull_remote, daemon=True).start()
-
-    def _upload_to_supabase(self) -> None:
-        """Push local institution changes to Supabase without blocking Tk."""
-
-        def upload() -> None:
-            try:
-                synced = passive_sync.sync_once()
-            except Exception as error:
-                error_text = str(error)
-                self.root.after(
-                    0,
-                    lambda: messagebox.showerror(
-                        "Supabase upload failed",
-                        f"Could not upload local changes:\n{error_text}",
-                    ),
-                )
-                return
-
-            self.root.after(
-                0,
-                lambda: (self._load_University(), messagebox.showinfo(
-                    "Supabase upload",
-                    f"Synchronization completed. Rows processed: {synced}",
-                )),
-            )
-
-        threading.Thread(target=upload, name="supabase-manual-upload", daemon=True).start()
-
-    def _load_University(self) -> None:
-        for iid in self.uni_tree.get_children():
-            self.uni_tree.delete(iid)
-        try:
-            # Repair an empty or older packaged database before reading it.
-            create_tables()
-            for uid, code, name in get_all_University():
-                display_code = code or ""
-                self.uni_tree.insert("", "end", values=(display_code, name, uid))
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not load University:\n{e}")
-
-    def _on_uni_select(self, _event=None) -> None:
-        sel = self.uni_tree.selection()
-        if not sel:
-            return
-        vals = self.uni_tree.item(sel[0])["values"]
-        if not vals:
-            return
-        # (code, name, internal_id)
-        self.uni_id_e.delete(0, "end")
-        self.uni_id_e.insert(0, vals[0] or "")
-        self.uni_name_e.delete(0, "end")
-        self.uni_name_e.insert(0, vals[1] or "")
-
-    def _add_university_clicked(self) -> None:
-        """Prepare to add a new university and save it.
-
-        Clears any current selection so _save_university() treats the
-        entry as a new record.
-        """
-        try:
-            self.uni_tree.selection_remove(self.uni_tree.selection())
-        except Exception:
-            pass
-        self._save_university()
-
-    def _update_university_clicked(self) -> None:
-        """Update the currently selected university using the form."""
-        self._save_university()
-
-    def _save_university(self) -> None:
-        code = self.uni_id_e.get().strip()
-        name = self.uni_name_e.get().strip()
-        if not (code and name):
-            messagebox.showerror("Error", "University ID and name are required")
-            return
-
-        sel = self.uni_tree.selection()
-        try:
-            if sel:
-                vals = self.uni_tree.item(sel[0])["values"]
-                internal_id = int(vals[2])
-                update_university(internal_id, code, name)
-            else:
-                add_university(code, name)
-            self._load_University()
-            self._refresh_dept_University()
-            self._load_departments()
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not save university:\n{e}")
-
-    def _delete_university(self) -> None:
-        sel = self.uni_tree.selection()
-        if not sel:
-            messagebox.showerror("Error", "No university selected")
-            return
-        vals = self.uni_tree.item(sel[0])["values"]
-        uid = int(vals[2])
-        code = vals[0] or uid
-        if not messagebox.askyesno("Confirm", f"Delete university {code}?"):
-            return
-        try:
-            delete_university(uid)
-            self._load_University()
-            self._refresh_dept_University()
-            self._load_departments()
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not delete university:\n{e}")
 
     # ================= DEPARTMENTS =================
 
     def _build_department_tab(self, notebook: ttk.Notebook) -> None:
         frame = tk.Frame(notebook, bg=BG_COLOR)
         notebook.add(frame, text="Departments")
-
-        # Top section: University selector
-        top = tk.Frame(frame, bg=BG_COLOR)
-        top.pack(fill="x", padx=8, pady=(8, 4))
-
-        tk.Label(
-            top,
-            text="Filter by University:",
-            font=ui_styles.LABEL_FONT,
-            bg=BG_COLOR,
-            fg=TEXT,
-        ).pack(side="left")
-        self.dept_uni_var = tk.StringVar(master=self.root)
-        self.dept_uni_combo = ttk.Combobox(
-            top,
-            textvariable=self.dept_uni_var,
-            state="readonly",
-            width=40,
-            font=ui_styles.LABEL_FONT,
-        )
-        self.dept_uni_combo.pack(side="left", padx=(6, 0), fill="x", expand=True)
-        self.dept_uni_combo.bind("<<ComboboxSelected>>", lambda _e: self._load_departments())
 
         # Department list
         tree = ttk.Treeview(
@@ -435,24 +195,14 @@ class InstitutionSetupUI:
             University = get_all_University()
         except Exception:
             University = []
-        # Map combobox label -> internal id and also keep a reverse
-        # mapping so we can display the human-readable University ID
-        # for each department row.
-        self._dept_uni_map = {}
         self._uni_id_to_code: dict[int, str] = {}
-        for uid, code, name in University:
-            label_code = code or str(uid)
-            label = f"{label_code} - {name}"
-            self._dept_uni_map[label] = uid
-            self._uni_id_to_code[uid] = label_code
-        values = list(self._dept_uni_map.keys()) or ["(none)"]
-        self.dept_uni_combo["values"] = values
-        if values:
-            self.dept_uni_combo.current(0)
+        self._university_id: int | None = None
+        for uid, code, _name in University[:1]:
+            self._university_id = uid
+            self._uni_id_to_code[uid] = code or str(uid)
 
     def _current_dept_university_id(self) -> int | None:
-        label = self.dept_uni_var.get()
-        return self._dept_uni_map.get(label)
+        return self._university_id
 
     def _load_departments(self) -> None:
         for iid in self.dept_tree.get_children():
@@ -465,7 +215,7 @@ class InstitutionSetupUI:
 
         current_uid = self._current_dept_university_id()
         for did, code, name, uid in rows:
-            if current_uid is None or uid == current_uid:
+            if current_uid is not None and uid == current_uid:
                 display_code = code or ""
                 uni_display = self._uni_id_to_code.get(uid, str(uid))
                 self.dept_tree.insert("", "end", values=(display_code, name, uni_display, did))

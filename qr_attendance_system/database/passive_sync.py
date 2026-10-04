@@ -39,11 +39,11 @@ BOOTSTRAP_TABLES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 
 
 def _configured_university_code() -> str:
-    return os.getenv("PRESENCE_SCAN_UNIVERSITY_CODE", "").strip()
+    return os.getenv("MAIN_PRESENCE_SCAN_UNIVERSITY_CODE", os.getenv("PRESENCE_SCAN_UNIVERSITY_CODE", "")).strip()
 
 
 def _sync_all_universities() -> bool:
-    return os.getenv("PRESENCE_SCAN_ALL_UNIVERSITIES", "").strip().lower() in {
+    return os.getenv("DEV_PRESENCE_SCAN_ALL_UNIVERSITIES", os.getenv("PRESENCE_SCAN_ALL_UNIVERSITIES", "")).strip().lower() in {
         "1", "true", "yes", "on"
     }
 
@@ -186,25 +186,67 @@ def sync_once() -> int:
 
         remote_cursor = remote.cursor()
         synced_rows = _pull_remote_rows(local, remote_cursor)
+        scoped_department_ids: list[int] = []
+        university_code = _configured_university_code()
+        if university_code and not _sync_all_universities():
+            remote_cursor.execute(
+                'SELECT d.department_id FROM "departments" d '
+                'JOIN "university" u ON u.university_id = d.university_id '
+                'WHERE u.university_code = %s',
+                (university_code,),
+            )
+            scoped_department_ids = [row["department_id"] for row in remote_cursor.fetchall()]
         for local_table, remote_table, primary_keys in TABLES:
             if local_table in {"hods", "lecturers"}:
-                university_code = _configured_university_code()
                 if not university_code and not _sync_all_universities():
                     continue
                 if _sync_all_universities():
                     rows = local.execute(f'SELECT * FROM "{local_table}"').fetchall()
-                else:
+                elif scoped_department_ids:
+                    placeholders = ", ".join("?" for _ in scoped_department_ids)
                     rows = local.execute(
                         f'SELECT source.* FROM "{local_table}" source '
-                        'JOIN "departments" d ON d.department_id = source.department_id '
-                        'JOIN "University" u ON u.university_id = d.university_id '
-                        'WHERE u.university_code = ?',
-                        (university_code,),
+                        f'WHERE source.department_id IN ({placeholders})',
+                        tuple(scoped_department_ids),
                     ).fetchall()
+                else:
+                    rows = []
             else:
                 rows = local.execute(f'SELECT * FROM "{local_table}"').fetchall()
             if not rows:
                 continue
+            if local_table == "University":
+                remote_cursor.execute('SELECT university_code FROM "university"')
+                remote_codes = {
+                    row["university_code"]
+                    for row in remote_cursor.fetchall()
+                    if row["university_code"]
+                }
+                rows = [row for row in rows if row["university_code"] not in remote_codes]
+                if not rows:
+                    continue
+            elif local_table == "departments":
+                remote_cursor.execute('SELECT department_code FROM "departments"')
+                remote_codes = {
+                    row["department_code"]
+                    for row in remote_cursor.fetchall()
+                    if row["department_code"]
+                }
+                rows = [row for row in rows if row["department_code"] not in remote_codes]
+                if not rows:
+                    continue
+            elif local_table == "hods":
+                remote_cursor.execute('SELECT hod_id, department_id FROM "hods"')
+                remote_hods = remote_cursor.fetchall()
+                remote_ids = {row["hod_id"] for row in remote_hods}
+                remote_departments = {row["department_id"] for row in remote_hods}
+                rows = [
+                    row for row in rows
+                    if row["hod_id"] not in remote_ids
+                    and row["department_id"] not in remote_departments
+                ]
+                if not rows:
+                    continue
             columns = list(rows[0].keys())
             remote_columns = [
                 "department" if local_table == "students" and column == "Department" else column

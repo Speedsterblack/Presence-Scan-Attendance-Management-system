@@ -8,6 +8,7 @@ from typing import Any, Optional
 from config import settings as app_settings
 from database.course_registration_db import register_student_to_course
 from database.hod_db import get_hod_department
+from database.department_db import get_department
 from database.lecturer_db import add_lecturer, get_all_lecturers
 from database.student_db import add_student
 from services.course_service import create_course_with_timetable
@@ -131,7 +132,26 @@ class ImportCenterUI:
         except Exception:
             return None
 
+    def _admin_department_labels(self) -> tuple[int, set[str]] | None:
+        """Return the current admin department ID and accepted CSV labels."""
+
+        dept_id = self._admin_department_id()
+        if dept_id is None:
+            return None
+        department = get_department(dept_id)
+        if department is None:
+            return None
+        _department_id, code, name, _university_id = department
+        labels = {str(value).strip().casefold() for value in (code, name) if value}
+        return dept_id, labels
+
     def _import_students(self) -> None:
+        department_scope = self._admin_department_labels()
+        if department_scope is None:
+            messagebox.showerror("Import Error", "Could not determine your admin department.")
+            return
+        _dept_id, allowed_departments = department_scope
+
         path = self._select_csv("Select students CSV")
         if not path:
             return
@@ -144,10 +164,23 @@ class ImportCenterUI:
                 for idx, row in enumerate(reader, start=2):
                     sid = str(row.get("student_id") or "").strip()
                     name = str(row.get("student_name") or "").strip()
-                    Department = str(row.get("Department") or "").strip()
+                    Department = str(
+                        row.get("Department")
+                        or row.get("department")
+                        or row.get("department_code")
+                        or ""
+                    ).strip()
                     level = str(row.get("level") or "").strip()
                     if not sid or not name:
                         failures.append(f"row {idx}: missing student_id/student_name")
+                        continue
+                    if not Department:
+                        failures.append(f"row {idx}: missing Department")
+                        continue
+                    if Department.casefold() not in allowed_departments:
+                        failures.append(
+                            f"row {idx}: department '{Department}' does not belong to your department"
+                        )
                         continue
                     try:
                         add_student(sid, name, Department, level)

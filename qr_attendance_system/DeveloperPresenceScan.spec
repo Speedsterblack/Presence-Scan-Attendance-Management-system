@@ -35,7 +35,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='DeveloperPresenceScan',
+    name='HeadOfUniversity',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

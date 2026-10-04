@@ -217,6 +217,14 @@ def mark_attendance(student_id: str, course_code: str):
         synced=True,
     )
 
+    try:
+        from services.lan_sync import push_local_attendance
+        import threading
+
+        threading.Thread(target=push_local_attendance, daemon=True).start()
+    except Exception:
+        pass
+
     # After inserting attendance, check whether the semester should be closed.
     try:
         # Import here to avoid circular imports at module import time

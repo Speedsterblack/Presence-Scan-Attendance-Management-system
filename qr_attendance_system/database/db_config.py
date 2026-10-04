@@ -21,24 +21,34 @@ def _default_database_path() -> Path:
         app_data = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA")
         if app_data:
             application_name = (
-                "Presence Scan Developer"
-                if Path(sys.executable).stem.lower().startswith("developer")
+                "Presence Scan Head"
+                if Path(sys.executable).stem.lower().startswith(("developer", "head"))
                 else "Presence Scan"
             )
             return Path(app_data) / application_name / "data" / "presence_scan.db"
     return Path(__file__).with_name("presence_scan.db")
 
 
+def _is_developer_app() -> bool:
+    return getattr(sys, "frozen", False) and Path(sys.executable).stem.lower().startswith(("developer", "head"))
+
+
+def _app_setting(name: str, default: str = "") -> str:
+    """Read app-specific settings, falling back to legacy shared settings."""
+
+    prefix = "DEV_" if _is_developer_app() else "MAIN_"
+    return os.getenv(f"{prefix}{name}") or os.getenv(name, default)
+
+
 DB_PATH = Path(os.getenv("DATABASE_PATH") or _default_database_path())
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-# Local SQLite is the responsive working copy whenever remote credentials exist.
-LOCAL_PRIMARY = os.getenv("LOCAL_PRIMARY", "1").strip().lower() in {"1", "true", "yes", "on"}
+DATABASE_URL = ""
+LOCAL_PRIMARY = True
 DATABASE_PARAMETERS = {
-    "host": os.getenv("DB_HOST") or os.getenv("DATABASE_HOST"),
-    "port": os.getenv("DB_PORT") or os.getenv("DATABASE_PORT", "5432"),
-    "dbname": os.getenv("DB_NAME") or os.getenv("DATABASE_NAME"),
-    "user": os.getenv("DB_USER") or os.getenv("DATABASE_USER"),
-    "password": os.getenv("DB_PASSWORD") or os.getenv("DATABASE_PASSWORD"),
+    "host": _app_setting("DB_HOST") or os.getenv("DATABASE_HOST"),
+    "port": _app_setting("DB_PORT") or os.getenv("DATABASE_PORT", "5432"),
+    "dbname": _app_setting("DB_NAME") or os.getenv("DATABASE_NAME"),
+    "user": _app_setting("DB_USER") or os.getenv("DATABASE_USER"),
+    "password": _app_setting("DB_PASSWORD") or os.getenv("DATABASE_PASSWORD"),
 }
 
 
@@ -85,13 +95,6 @@ def init_db_pool(dsn: Optional[str] = None) -> None:
     """Prepare the configured database backend."""
 
     global DATABASE_URL
-    if dsn:
-        DATABASE_URL = dsn.strip()
-    if (DATABASE_URL or _has_database_parameters()) and not LOCAL_PRIMARY:
-        if psycopg2 is None:
-            raise RuntimeError("DATABASE_URL is set but psycopg2-binary is not installed")
-        return
-
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not DB_PATH.exists():
         DB_PATH.touch()
@@ -99,19 +102,6 @@ def init_db_pool(dsn: Optional[str] = None) -> None:
 
 def _connect() -> DatabaseConnection:
     init_db_pool()
-    if DATABASE_URL and not LOCAL_PRIMARY:
-        assert psycopg2 is not None
-        assert RealDictCursor is not None
-        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    if _has_database_parameters() and not LOCAL_PRIMARY:
-        assert psycopg2 is not None
-        assert RealDictCursor is not None
-        return psycopg2.connect(
-            **DATABASE_PARAMETERS,
-            sslmode=os.getenv("DB_SSLMODE", "require"),
-            cursor_factory=RealDictCursor,
-        )
-
     conn = sqlite3.connect(
         DB_PATH,
         detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
@@ -153,7 +143,7 @@ def close_pool() -> None:
 
 
 def is_postgres() -> bool:
-    return bool((DATABASE_URL or _has_database_parameters()) and not LOCAL_PRIMARY)
+    return False
 
 
 class _SQLiteRow(dict):

@@ -80,6 +80,7 @@ begin
   begin
     RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'LOCAL_PRIMARY', '1');
     RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'PRESENCE_SCAN_UNIVERSITY_CODE', DatabasePage.Values[0]);
+    RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'MAIN_PRESENCE_SCAN_UNIVERSITY_CODE', DatabasePage.Values[0]);
     RegDeleteValue(HKEY_CURRENT_USER, 'Environment', 'PRESENCE_SCAN_ALL_UNIVERSITIES');
   end;
 end;

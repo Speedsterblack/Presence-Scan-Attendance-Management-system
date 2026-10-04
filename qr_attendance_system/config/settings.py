@@ -30,6 +30,10 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
 		# default directory for exported CSVs/reports
 		"default_directory": str((_BASE_DIR.parent / "reports").resolve()),
 	},
+	"network": {
+		# URL of the Head of University LAN hub used by lecturer clients
+		"head_url": "",
+	},
 	"admin": {
 		# auto-refresh for the admin analytics dashboard
 		"auto_refresh_enabled": True,
@@ -228,6 +232,15 @@ def get_default_grace_minutes() -> int:
 		return int(value)
 	except Exception:
 		return int(_DEFAULT_SETTINGS["attendance"]["default_grace_minutes"])
+
+
+def get_head_url() -> str:
+	"""Return the configured local Head of University hub URL."""
+	import os
+
+	return os.getenv("PRESENCE_HEAD_URL", "").strip() or str(
+		load_settings().get("network", {}).get("head_url", "")
+	).strip()
 
 
 def get_export_directory() -> str:

@@ -28,14 +28,14 @@ _TEMPLATES_DIR = str(Path(__file__).resolve().parent.parent / "templates")
 def get_local_ip() -> str:
     """Get the local machine's IP address on the network."""
     try:
-        # Connect to a public DNS (doesn't send data, just determines route)
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
+        addresses = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
+        for address in addresses:
+            ip = address[4][0]
+            if not ip.startswith("127."):
+                return ip
     except Exception:
-        return "127.0.0.1"
+        pass
+    return "127.0.0.1"
 
 
 def start_mobile_scanner_server(port: int = 5000, course_code: str = "") -> str:
