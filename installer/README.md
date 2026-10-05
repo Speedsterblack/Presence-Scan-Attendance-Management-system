@@ -5,10 +5,10 @@ This folder contains two independent GUI Windows installers based on Inno Setup.
 ## Files
 
 - `presence_scan.iss` - main application installer definition
-- `presence_scan_developer.iss` - Head of University application installer definition
+- `presence_scan_head.iss` - Head of University application installer definition
 - `build_installer.ps1` - builds both PyInstaller executables and invokes `ISCC.exe`
 - `..\qr_attendance_system\PresenceScan.spec` - main application executable definition
-- `..\qr_attendance_system\DeveloperPresenceScan.spec` - Head of University executable definition
+- `..\qr_attendance_system\HeadOfUniversity.spec` - Head of University executable definition
 
 ## Build Steps
 
@@ -22,7 +22,7 @@ powershell -ExecutionPolicy Bypass -File .\installer\build_installer.ps1
 3. Two installer executables will be generated in `dist`:
 
 - `dist\PresenceScanInstaller.exe`
-- `dist\PresenceScanDeveloperInstaller.exe`
+- `dist\PresenceScanHeadInstaller.exe`
 
 ## Install Experience
 
@@ -32,8 +32,11 @@ The generated installer:
 - The Head installer installs only `HeadOfUniversity.exe`.
 - Both installers can be installed side by side with separate Start Menu shortcuts.
 - Each installer can optionally create its own per-user desktop shortcut.
-- The main installer wizard asks only for the university code and preserves the existing database connection settings.
-- The developer installer wizard can configure the shared database connection and university code for a new machine.
+- The Head application asks for the university code and name on first launch.
+- The main installer asks for the Head hub URL and stores it for the lecturer app.
+- The Head application starts a local LAN hub on port `8765`.
+- Lecturer applications connect through Settings using the Head hub URL and pairing token.
+- No internet, PostgreSQL, or Supabase configuration is required.
 - Installs into the current user's local application directory so the existing local SQLite database can be written without administrator access.
 - The main app database is at `%LOCALAPPDATA%\Presence Scan\data\presence_scan.db`.
 - The Head app database is at `%LOCALAPPDATA%\Presence Scan Head\data\presence_scan.db`.

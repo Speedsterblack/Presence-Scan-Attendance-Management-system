@@ -282,12 +282,23 @@ class SettingsUI:
             width=42,
             style="App.TEntry",
         ).grid(row=0, column=1, sticky="w", padx=6, pady=4)
+        tk.Label(network_frame, text="Pairing token:", bg=bg, fg=fg).grid(
+            row=1, column=0, sticky="w", padx=6, pady=4
+        )
+        self.head_token_var = tk.StringVar(master=self.root, value=app_settings.get_head_token())
+        ttk.Entry(
+            network_frame,
+            textvariable=self.head_token_var,
+            width=42,
+            show="*",
+            style="App.TEntry",
+        ).grid(row=1, column=1, sticky="w", padx=6, pady=4)
         tk.Label(
             network_frame,
-            text="Example: http://192.168.1.20:8765",
+            text="Example: https://192.168.1.20:8765",
             bg=bg,
             fg=fg,
-        ).grid(row=1, column=1, sticky="w", padx=6, pady=(0, 4))
+        ).grid(row=2, column=1, sticky="w", padx=6, pady=(0, 4))
 
         # ===== Admin dashboard / auto-refresh =====
         if self.is_admin:
@@ -675,6 +686,7 @@ class SettingsUI:
 
         export_dir = self.export_var.get().strip()
         head_url = self.head_url_var.get().strip().rstrip("/")
+        head_token = self.head_token_var.get().strip()
 
         partial = {
             "theme": {"name": self.theme_var.get().strip() or "light"},
@@ -697,7 +709,7 @@ class SettingsUI:
 
         try:
             # The Head hub is shared by all roles on this installation.
-            app_settings.update_settings({"network": {"head_url": head_url}})
+            app_settings.update_settings({"network": {"head_url": head_url, "head_token": head_token}})
             # Save into the settings bucket for the current role
             app_settings.update_settings_for_current_role(partial)
             # Re-apply theme immediately to this window and its parent

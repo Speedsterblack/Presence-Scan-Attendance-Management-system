@@ -14,8 +14,8 @@ from database.department_db import (
     update_department,
     delete_department,
 )
-from database.hod_db import upsert_hod_for_department
-from services.head_hub import get_head_hub_url
+from database.hod_db import get_hod_credentials_for_department, upsert_hod_for_department
+from services.head_hub import get_hub_token, get_head_hub_url
 
 _THEME = app_settings.get_theme()
 BG_COLOR = _THEME["bg_color"]
@@ -57,7 +57,7 @@ class InstitutionSetupUI:
         ).pack(pady=4)
         tk.Label(
             self.root,
-            text=f"University LAN hub: {get_head_hub_url()}",
+            text=f"University LAN hub: {get_head_hub_url()}  Pairing token: {get_hub_token()}",
             bg=BG_COLOR,
             fg=TEXT,
         ).pack(pady=(0, 4))
@@ -80,17 +80,21 @@ class InstitutionSetupUI:
         # Department list
         tree = ttk.Treeview(
             frame,
-            columns=("code", "name", "university", "internal_id"),
+            columns=("code", "name", "admin_id", "admin_password", "university", "internal_id"),
             show="headings",
             selectmode="browse",
             height=10,
         )
         tree.heading("code", text="Department ID", anchor="w")
         tree.heading("name", text="Department Name", anchor="w")
+        tree.heading("admin_id", text="Admin ID", anchor="w")
+        tree.heading("admin_password", text="Admin Password", anchor="w")
         tree.heading("university", text="University", anchor="w")
         tree.heading("internal_id", text="", anchor="w")
         tree.column("code", width=120, anchor="w")
         tree.column("name", width=250, anchor="w")
+        tree.column("admin_id", width=150, anchor="w")
+        tree.column("admin_password", width=150, anchor="w")
         tree.column("university", width=120, anchor="w")
         tree.column("internal_id", width=0, stretch=False)
         tree.pack(fill="both", expand=True, padx=8, pady=(4, 8))
@@ -218,7 +222,14 @@ class InstitutionSetupUI:
             if current_uid is not None and uid == current_uid:
                 display_code = code or ""
                 uni_display = self._uni_id_to_code.get(uid, str(uid))
-                self.dept_tree.insert("", "end", values=(display_code, name, uni_display, did))
+                credentials = get_hod_credentials_for_department(did)
+                admin_id = credentials[0] if credentials else ""
+                admin_password = "********" if credentials and credentials[1] else "Not configured"
+                self.dept_tree.insert(
+                    "",
+                    "end",
+                    values=(display_code, name, admin_id, admin_password, uni_display, did),
+                )
 
     def _on_dept_select(self, _event=None) -> None:
         sel = self.dept_tree.selection()
@@ -228,12 +239,14 @@ class InstitutionSetupUI:
         if not vals:
             return
         # (code, name, university_id, internal_id)
+            # (code, name, admin_id, admin_password, university_id, internal_id)
         self.dept_id_e.delete(0, "end")
         self.dept_id_e.insert(0, vals[0] or "")
         self.dept_name_e.delete(0, "end")
         self.dept_name_e.insert(0, vals[1] or "")
         # Do not auto-fill admin credentials for security; leave blank
         # so the developer must explicitly set or change them.
+            # explicitly when changing the department administrator.
         self.dept_admin_id_e.delete(0, "end")
         self.dept_admin_pw_e.delete(0, "end")
 
@@ -250,7 +263,7 @@ class InstitutionSetupUI:
         try:
             if sel:
                 vals = self.dept_tree.item(sel[0])["values"]
-                did = int(vals[3])
+                did = int(vals[5])
                 update_department(did, code, name, uid)
                 if admin_id and admin_pw:
                     # Use department name as the HOD display name by default.
@@ -281,7 +294,7 @@ class InstitutionSetupUI:
             messagebox.showerror("Error", "No department selected")
             return
         vals = self.dept_tree.item(sel[0])["values"]
-        did = int(vals[3])
+        did = int(vals[5])
         code = vals[0] or did
         if not messagebox.askyesno("Confirm", f"Delete department {code}?"):
             return

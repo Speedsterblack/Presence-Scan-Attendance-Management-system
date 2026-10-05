@@ -57,11 +57,11 @@ try {
         throw "The main application executable build failed."
     }
 
-    Write-Host "Building developer application executable..." -ForegroundColor Cyan
-    $developerBuildOutput = & $python.Source -m PyInstaller --noconfirm --clean .\DeveloperPresenceScan.spec 2>&1
-    $developerBuildOutput | Write-Host
+    Write-Host "Building Head of University executable..." -ForegroundColor Cyan
+    $headBuildOutput = & $python.Source -m PyInstaller --noconfirm --clean .\HeadOfUniversity.spec 2>&1
+    $headBuildOutput | Write-Host
     if ($LASTEXITCODE -ne 0) {
-        throw "The developer application executable build failed."
+        throw "The Head of University executable build failed."
     }
 }
 finally {
@@ -83,7 +83,7 @@ if (-not $iscc) {
     exit 1
 }
 
-foreach ($issName in @("presence_scan.iss", "presence_scan_developer.iss")) {
+foreach ($issName in @("presence_scan.iss", "presence_scan_head.iss")) {
     $issPath = Join-Path $PSScriptRoot $issName
     if (-not (Test-Path $issPath)) {
         throw "Inno Setup script not found: $issPath"

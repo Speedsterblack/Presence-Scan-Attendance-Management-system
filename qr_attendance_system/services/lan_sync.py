@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import ssl
 from typing import Any
 from urllib.request import Request, urlopen
 
@@ -24,9 +25,33 @@ SYNC_TABLES = (
     "special_days",
 )
 
+SYNC_KEYS = {
+    "University": ("university_id",),
+    "departments": ("department_id",),
+    "semesters": ("semester_id",),
+    "hods": ("department_id",),
+    "lecturers": ("lecturer_id",),
+    "students": ("student_id",),
+    "courses": ("course_id",),
+    "course_registrations": ("student_id", "course_id", "semester_id"),
+    "timetable": ("timetable_id",),
+    "special_days": ("special_day_id",),
+}
+
 
 def _head_url() -> str:
     return app_settings.get_head_url().rstrip("/")
+
+
+def _head_headers() -> dict[str, str]:
+    token = app_settings.get_head_token()
+    return {"Accept": "application/json", "Authorization": f"Bearer {token}"}
+
+
+def _open(request: Request):
+    if request.full_url.startswith("https://"):
+        return urlopen(request, timeout=5, context=ssl._create_unverified_context())
+    return urlopen(request, timeout=5)
 
 
 def pull_from_head() -> int:
@@ -40,8 +65,8 @@ def pull_from_head() -> int:
     if not base_url:
         return 0
 
-    request = Request(f"{base_url}/api/snapshot", headers={"Accept": "application/json"})
-    with urlopen(request, timeout=5) as response:
+    request = Request(f"{base_url}/api/snapshot", headers=_head_headers())
+    with _open(request) as response:
         payload: dict[str, Any] = json.loads(response.read().decode("utf-8"))
 
     tables = payload.get("tables")
@@ -62,6 +87,18 @@ def pull_from_head() -> int:
                 columns = list(row)
                 column_sql = ", ".join(f'"{column}"' for column in columns)
                 placeholders = ", ".join("?" for _ in columns)
+                keys = SYNC_KEYS[table]
+                update_columns = [column for column in columns if column not in keys]
+                where_sql = " AND ".join(f'"{key}" = ?' for key in keys)
+                if update_columns:
+                    update_sql = ", ".join(f'"{column}" = ?' for column in update_columns)
+                    cursor = connection.execute(
+                        f'UPDATE "{table}" SET {update_sql} WHERE {where_sql}',
+                        tuple(row[column] for column in update_columns)
+                        + tuple(row[key] for key in keys),
+                    )
+                    if cursor.rowcount:
+                        continue
                 cursor = connection.execute(
                     f'INSERT OR IGNORE INTO "{table}" ({column_sql}) VALUES ({placeholders})',
                     tuple(row[column] for column in columns),
@@ -93,9 +130,12 @@ def push_local_attendance() -> int:
     request = Request(
         f"{base_url}/api/attendance",
         data=encoded_rows,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={
+            **_head_headers(),
+            "Content-Type": "application/json",
+        },
         method="POST",
     )
-    with urlopen(request, timeout=5) as response:
+    with _open(request) as response:
         payload: dict[str, Any] = json.loads(response.read().decode("utf-8"))
     return int(payload.get("inserted", 0))

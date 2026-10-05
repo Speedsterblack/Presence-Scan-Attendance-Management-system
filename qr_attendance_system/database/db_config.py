@@ -41,8 +41,8 @@ def _app_setting(name: str, default: str = "") -> str:
 
 
 DB_PATH = Path(os.getenv("DATABASE_PATH") or _default_database_path())
-DATABASE_URL = ""
-LOCAL_PRIMARY = True
+DATABASE_URL = _app_setting("DATABASE_URL").strip()
+LOCAL_PRIMARY = _app_setting("LOCAL_PRIMARY", "0").strip().lower() in {"1", "true", "yes", "on"}
 DATABASE_PARAMETERS = {
     "host": _app_setting("DB_HOST") or os.getenv("DATABASE_HOST"),
     "port": _app_setting("DB_PORT") or os.getenv("DATABASE_PORT", "5432"),
@@ -95,6 +95,12 @@ def init_db_pool(dsn: Optional[str] = None) -> None:
     """Prepare the configured database backend."""
 
     global DATABASE_URL
+    if dsn:
+        DATABASE_URL = dsn.strip()
+    if (DATABASE_URL or _has_database_parameters()) and not LOCAL_PRIMARY:
+        if psycopg2 is None:
+            raise RuntimeError("PostgreSQL is configured but psycopg2-binary is not installed")
+        return
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not DB_PATH.exists():
         DB_PATH.touch()
@@ -102,6 +108,18 @@ def init_db_pool(dsn: Optional[str] = None) -> None:
 
 def _connect() -> DatabaseConnection:
     init_db_pool()
+    if DATABASE_URL and not LOCAL_PRIMARY:
+        assert psycopg2 is not None
+        assert RealDictCursor is not None
+        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    if _has_database_parameters() and not LOCAL_PRIMARY:
+        assert psycopg2 is not None
+        assert RealDictCursor is not None
+        return psycopg2.connect(
+            **DATABASE_PARAMETERS,
+            sslmode=os.getenv("DB_SSLMODE", "prefer"),
+            cursor_factory=RealDictCursor,
+        )
     conn = sqlite3.connect(
         DB_PATH,
         detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
@@ -143,7 +161,7 @@ def close_pool() -> None:
 
 
 def is_postgres() -> bool:
-    return False
+    return bool((DATABASE_URL or _has_database_parameters()) and not LOCAL_PRIMARY)
 
 
 class _SQLiteRow(dict):
@@ -235,7 +253,7 @@ def get_cursor(commit: bool = True) -> SQLiteCursorContext:
 
 
 def get_local_cursor(commit: bool = True) -> SQLiteCursorContext:
-    """Return a cursor backed by the local SQLite database."""
+    """Return a cursor backed by the configured shared or local database."""
 
-    return SQLiteCursorContext(commit, local=True)
+    return SQLiteCursorContext(commit, local=not is_postgres())
 

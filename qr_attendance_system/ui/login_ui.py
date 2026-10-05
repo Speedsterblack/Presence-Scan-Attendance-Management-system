@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 from services.auth_service import authenticate_user
+from services import lan_sync
 from utils.session import login
 from ui.assets_utils import get_logo_image
 from ui import styles as ui_styles
@@ -113,6 +114,13 @@ class LoginUI:
         user_id = self.username_entry.get().strip()
         password = self.password_entry.get()
         role_choice = self.role_var.get() if hasattr(self, "role_var") else None
+
+        try:
+            # Refresh Head-managed accounts before checking credentials.
+            # Local login remains available if the Head hub is offline.
+            lan_sync.pull_from_head()
+        except Exception:
+            pass
 
         try:
             user = authenticate_user(user_id, password, role_choice)

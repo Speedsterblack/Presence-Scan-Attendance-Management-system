@@ -48,27 +48,27 @@ Name: "{userdesktop}\{#MyAppName}"; \
 
 [Code]
 var
-  DatabasePage: TInputQueryWizardPage;
+  HeadPage: TInputQueryWizardPage;
 
 procedure InitializeWizard;
 begin
-  DatabasePage := CreateInputQueryPage(
+  HeadPage := CreateInputQueryPage(
     wpSelectDir,
-    'Shared database setup',
-    'Assign this desktop to a university',
-    'Enter the university code whose credentials this desktop should use.'
+    'University LAN setup',
+    'Connect this desktop to the Head of University',
+    'Enter the Head hub address shown by the Head of University application.'
   );
-  DatabasePage.Add('University code:', False);
+  HeadPage.Add('Head hub URL:', False);
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
-  if CurPageID = DatabasePage.ID then
+  if CurPageID = HeadPage.ID then
   begin
-    if Trim(DatabasePage.Values[0]) = '' then
+    if Trim(HeadPage.Values[0]) = '' then
     begin
-      MsgBox('University code is required.', mbError, MB_OK);
+      MsgBox('Head hub URL is required.', mbError, MB_OK);
       Result := False;
     end;
   end;
@@ -78,10 +78,9 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
   begin
-    RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'LOCAL_PRIMARY', '1');
-    RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'PRESENCE_SCAN_UNIVERSITY_CODE', DatabasePage.Values[0]);
-    RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'MAIN_PRESENCE_SCAN_UNIVERSITY_CODE', DatabasePage.Values[0]);
-    RegDeleteValue(HKEY_CURRENT_USER, 'Environment', 'PRESENCE_SCAN_ALL_UNIVERSITIES');
+    RegWriteStringValue(HKEY_CURRENT_USER, 'Environment', 'PRESENCE_HEAD_URL', HeadPage.Values[0]);
+    RegDeleteValue(HKEY_CURRENT_USER, 'Environment', 'PRESENCE_SCAN_UNIVERSITY_CODE');
+    RegDeleteValue(HKEY_CURRENT_USER, 'Environment', 'MAIN_PRESENCE_SCAN_UNIVERSITY_CODE');
   end;
 end;
 

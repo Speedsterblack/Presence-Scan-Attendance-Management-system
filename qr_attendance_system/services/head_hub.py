@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import secrets
 import sqlite3
+import ssl
 import threading
 from datetime import date, datetime, time
+from pathlib import Path
 from typing import Any
 
 from flask import Flask, jsonify, request
@@ -31,6 +34,33 @@ HUB_TABLES = (
     "timetable",
     "special_days",
 )
+
+
+def _token_path() -> Path:
+    return Path(db_config.DB_PATH).parent / "head_hub_token.txt"
+
+
+def get_hub_token() -> str:
+    path = _token_path()
+    try:
+        if path.exists():
+            token = path.read_text(encoding="utf-8").strip()
+            if token:
+                return token
+        token = secrets.token_urlsafe(32)
+        path.write_text(token, encoding="utf-8")
+        return token
+    except OSError:
+        return ""
+
+
+def _certificate_paths() -> tuple[Path, Path] | None:
+    base = Path(__file__).resolve().parent.parent
+    cert_file = base / "cert.pem"
+    key_file = base / "key.pem"
+    if cert_file.exists() and key_file.exists():
+        return cert_file, key_file
+    return None
 
 
 def _json_value(value: Any) -> Any:
@@ -60,9 +90,19 @@ def start_head_hub_server(port: int = HUB_PORT) -> str:
 
     global _HUB_THREAD, _HUB_RUNNING
     if _HUB_RUNNING:
-        return f"http://{get_local_ip()}:{port}"
+        return get_head_hub_url(port)
 
     app = Flask("presence_scan_head_hub")
+
+    @app.before_request
+    def require_pairing_token() -> Any:
+        if request.path == "/api/health":
+            return None
+        expected = get_hub_token()
+        received = request.headers.get("Authorization", "")
+        if not expected or received != f"Bearer {expected}":
+            return jsonify({"error": "Hub authentication required"}), 401
+        return None
 
     @app.get("/api/health")
     def health() -> Any:
@@ -111,7 +151,17 @@ def start_head_hub_server(port: int = HUB_PORT) -> str:
             connection.close()
 
     def run() -> None:
-        app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+        certificate = _certificate_paths()
+        ssl_context = None
+        if certificate:
+            ssl_context = certificate
+        app.run(
+            host="0.0.0.0",
+            port=port,
+            debug=False,
+            use_reloader=False,
+            ssl_context=ssl_context,
+        )
 
     _HUB_THREAD = threading.Thread(target=run, name="presence-scan-head-hub", daemon=True)
     _HUB_THREAD.start()
@@ -120,4 +170,5 @@ def start_head_hub_server(port: int = HUB_PORT) -> str:
 
 
 def get_head_hub_url(port: int = HUB_PORT) -> str:
-    return f"http://{get_local_ip()}:{port}"
+    scheme = "https" if _certificate_paths() else "http"
+    return f"{scheme}://{get_local_ip()}:{port}"

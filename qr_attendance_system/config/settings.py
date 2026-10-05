@@ -33,6 +33,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
 	"network": {
 		# URL of the Head of University LAN hub used by lecturer clients
 		"head_url": "",
+		"head_token": "",
 	},
 	"admin": {
 		# auto-refresh for the admin analytics dashboard
@@ -236,11 +237,35 @@ def get_default_grace_minutes() -> int:
 
 def get_head_url() -> str:
 	"""Return the configured local Head of University hub URL."""
-	import os
-
-	return os.getenv("PRESENCE_HEAD_URL", "").strip() or str(
+	return _get_user_environment_value("PRESENCE_HEAD_URL") or str(
 		load_settings().get("network", {}).get("head_url", "")
 	).strip()
+
+
+def get_head_token() -> str:
+	"""Return the pairing token for the Head of University LAN hub."""
+	return _get_user_environment_value("PRESENCE_HEAD_TOKEN") or str(
+		load_settings().get("network", {}).get("head_token", "")
+	).strip()
+
+
+def _get_user_environment_value(name: str) -> str:
+	import os
+
+	value = os.getenv(name, "").strip()
+	if value:
+		return value
+	if sys.platform != "win32":
+		return ""
+	try:
+		import winreg  # type: ignore[import-not-found]
+
+		key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment")
+		value, _ = winreg.QueryValueEx(key, name)
+		winreg.CloseKey(key)
+		return str(value).strip()
+	except Exception:
+		return ""
 
 
 def get_export_directory() -> str:

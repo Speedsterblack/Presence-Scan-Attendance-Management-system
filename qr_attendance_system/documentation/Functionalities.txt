@@ -1,47 +1,40 @@
 ## Core Attendance
 
-- User login for HOD/admin and lecturers
-- Hashed password storage and password updates
+- User login for HOD/admin and lecturer accounts
+- Salted PBKDF2-SHA256 password hashing
 - Role-based access control
 - QR code generation for students
-- Camera-based QR scanning
-- Mobile phone QR scanning through a local Flask server
+- Desktop camera QR scanning
+- Optional phone QR scanning over the local Wi-Fi/LAN
 - Present and Late attendance statuses
 - Grace-period handling
 - Duplicate attendance prevention
-- Course/session validation before scanning
-- Offline attendance recording
-- Retry synchronization when the database is unavailable
+- Course and timetable validation before scanning
+- Local offline attendance recording
 - Attendance reports by course and date
 - Registered students displayed as Absent when no attendance exists
 - Semester-based attendance and absence calculations
 - Student attendance lookup by name or ID
-- Per-course attendance summaries
-- Attendance graphs
+- Per-course attendance summaries and graphs
 - Present, Late, Absent, Observed, and Expected totals
 - Low-attendance course detection
 
 ## Student Management
 
-- Add students
-- Update student information
-- Delete students
+- Add, update, and delete students
 - Search students by name or ID
 - Filter students by department and level
 - View student records
-- Preview student QR codes
-- Print student QR codes
+- Preview and print student QR codes
 - View student transcript history
+- Department-safe CSV student imports
 
 ## Course Management
 
-- Add courses
-- Update courses
-- Delete courses
+- Add, update, and delete courses
 - Assign courses to departments
 - Assign lecturers to courses
-- Set credit hours
-- Set grace periods
+- Set credit hours and grace periods
 - Configure weekly course timetables
 - Set multiple class days and start/end times
 - Search and view courses
@@ -50,8 +43,7 @@
 
 ## Course Registration
 
-- Register students for courses
-- Unregister students from courses
+- Register and unregister students for courses
 - View courses registered by a student
 - View students registered for a course
 - Semester-scoped registrations
@@ -59,22 +51,23 @@
 
 ## Lecturer Management
 
-- Add lecturers
-- Update lecturer profiles
-- Delete lecturers
+- Add, update, and delete lecturers
 - Assign lecturers to departments
 - Assign lecturer roles
 - Reset lecturer passwords
 - Restrict lecturers to their assigned courses
 
-## Institution Management
+## Head of University Management
 
-- Add, update, and delete universities
+- First-run university code and university name setup
+- One-university-per-Head-installation model
+- Central Head of University LAN hub
 - Add, update, and delete departments
-- Assign departments to universities
-- Create HOD/admin accounts for departments
+- Create and update HOD/admin accounts for departments
+- Display Department ID, Department Name, Admin ID, and masked Admin Password status
 - Enforce unique university and department identifiers
-- Filter departments by university
+- No university filter is required because each Head installation manages one university
+- No university creation or deletion controls in the Head workspace
 
 ## Semester Management
 
@@ -120,22 +113,47 @@
 - Admin PIN management
 - Semester rollover confirmation
 - Audit logging of administrative actions
-- Account settings
+- Account settings and password reset
+- Live account refresh from the Head hub
 - Logout
 
-## Synchronization and Storage
+## Offline and LAN Communication
 
-- Local SQLite database mode
-- PostgreSQL/Supabase support
-- Local-first operation
-- Bidirectional background synchronization
-- Remote rows imported locally
-- Local rows uploaded remotely
-- Retry after network failures
-- Local credentials retained permanently
-- Seven-day cleanup of synchronized attendance cache only
-- Pending unsynchronized attendance retained until synchronization
-- Configurable database and cache locations
-- Windows launcher scripts
-- Developer and standard application installers
+- Local SQLite database for each Head and lecturer installation
+- No internet or Supabase dependency
+- Head hub communication over the university LAN
+- HTTPS transport using the bundled local certificate
+- Persistent Head pairing token
+- Authenticated master-data snapshot requests
+- Authenticated attendance upload requests
+- Lecturer master-data pull at startup
+- Lecturer master-data pull before every login attempt
+- Lecturer account refresh when Account Details is opened
+- Head-managed records update matching stale lecturer records
+- Local lecturer work continues when the Head hub is unavailable
+- Phone-to-lecturer communication over the local LAN
+- Windows Firewall compatibility on private networks
+
+## Security
+
+- PBKDF2-SHA256 password hashing with per-password salts
+- Constant-time password comparisons
+- Role and department authorization checks
+- Masked password fields and masked Head admin-password display
+- HTTPS Head hub transport
+- Pairing-token authentication for protected hub endpoints
+- Unauthorized snapshot and attendance requests rejected with HTTP 401
+- Local SQLite files stored in per-user application data directories
+- Audit logging for administrative actions
+
+## Packaging and Deployment
+
+- Separate lecturer and Head of University executables
+- `PresenceScan.exe` lecturer application
+- `HeadOfUniversity.exe` central Head application
+- `presence_scan.iss` lecturer installer
+- `presence_scan_head.iss` Head installer
+- `PresenceScanInstaller.exe` output
+- `PresenceScanHeadInstaller.exe` output
 - Inno Setup installer generation
+- Separate local database paths for Head and lecturer installations

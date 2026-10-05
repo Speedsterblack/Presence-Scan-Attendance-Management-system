@@ -5,7 +5,9 @@ import os
 from datetime import datetime, date, timedelta
 
 from database import analytics_db
+from database.db_config import get_local_cursor
 from utils import session
+from services.lan_sync import pull_from_head
 from ui.course_ui import CourseUI
 from ui.manage_lecturers_ui import ManageLecturersUI
 from ui.student_ui import StudentUI
@@ -389,6 +391,29 @@ class AdminDashboardUI:
         if not user:
             messagebox.showerror('Error', 'No user session found')
             return
+
+        # Refresh the local account name from the Head hub before displaying it.
+        try:
+            pull_from_head()
+        except Exception:
+            pass
+        try:
+            role = str(user.get("role", "")).lower()
+            table = "hods" if role == "admin" else "lecturers"
+            id_column = "hod_id" if role == "admin" else "lecturer_id"
+            name_column = "hod_name" if role == "admin" else "lecturer_name"
+            with get_local_cursor(commit=False) as cursor:
+                cursor.execute(
+                    f'SELECT "{name_column}" FROM "{table}" WHERE "{id_column}" = %s',
+                    (user.get("id"),),
+                )
+                row = cursor.fetchone()
+            if row:
+                user = dict(user)
+                user["name"] = row[name_column]
+                session.current_user = user
+        except Exception:
+            pass
 
         # If an account window is already open, just focus it
         if self._account_win is not None and self._account_win.winfo_exists():

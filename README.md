@@ -34,6 +34,24 @@ is written directly to the desktop's local SQLite database.
 The phone and desktop do not need internet access. They only need to be on the
 same local network, and Windows Firewall must allow the scanner port.
 
+For complete operating instructions, see the [Presence Scan User Manual](documentation/USER_MANUAL.md).
+
+### Head of University hub
+
+The Head of University application is the central LAN hub. On its first launch,
+enter the university code and university name. The application then displays
+its LAN address, normally in this form:
+
+```text
+http://192.168.x.x:8765
+```
+
+On each lecturer computer, open Settings, enter that address under **University
+LAN**, and restart the application. Lecturer clients pull central university
+master data at startup and send successful attendance records to the Head hub.
+Both computers must be connected to the same local network. No internet or
+Supabase account is required.
+
 ## Local attendance cache
 
 Attendance is written to the desktop database directly. The cache remains as a
@@ -82,10 +100,11 @@ Optional flags:
 
 ## Real GUI installer package (Windows .exe)
 
-This project now includes Inno Setup based GUI installers for both application entry points:
+This project includes Inno Setup based GUI installers for the lecturer and Head
+of University applications:
 
 - [installer/presence_scan.iss](installer/presence_scan.iss)
-- [installer/presence_scan_developer.iss](installer/presence_scan_developer.iss)
+- [installer/presence_scan_head.iss](installer/presence_scan_head.iss)
 
 Build script:
 
@@ -103,11 +122,11 @@ powershell -ExecutionPolicy Bypass -File .\installer\build_installer.ps1
 3. Output files:
 
 - `dist\PresenceScanInstaller.exe`
-- `dist\PresenceScanDeveloperInstaller.exe`
+- `dist\PresenceScanHeadInstaller.exe`
 
 ### What the GUI installer does
 
-- Builds and installs the normal login app and the developer institution-setup app separately
+- Builds and installs the lecturer app and Head of University hub separately
 - Creates Start Menu shortcuts for both apps
 - Optionally creates per-user desktop shortcuts
 - Installs to a writable per-user application directory for local SQLite database support

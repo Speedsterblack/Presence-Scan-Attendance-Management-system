@@ -11,11 +11,13 @@ datas = [
     (str(project_root / 'templates' / 'mobile_scanner.html'), 'templates'),
     (str(project_root / 'assets' / 'images' / 'background.png'), 'assets/images'),
     (str(project_root / 'assets' / 'icons' / 'Presence_Scan.ico'), 'assets/icons'),
+    (str(project_root / 'cert.pem'), '.'),
+    (str(project_root / 'key.pem'), '.'),
 ]
 
 
 a = Analysis(
-    ['main\\developer_main.py'],
+    ['main\\head_main.py'],
     pathex=[str(project_root)],
     binaries=[],
     datas=datas,

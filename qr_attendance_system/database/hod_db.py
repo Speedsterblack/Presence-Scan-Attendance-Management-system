@@ -48,6 +48,21 @@ def get_hod_department(hod_id: str) -> Optional[int]:
     return row["department_id"]
 
 
+def get_hod_credentials_for_department(department_id: int) -> Optional[Tuple[str, str]]:
+    """Return the HOD ID and stored password marker for a department."""
+
+    with get_local_cursor(commit=False) as cursor:
+        cursor.execute(
+            "SELECT hod_id, password FROM hods WHERE department_id = %s",
+            (department_id,),
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return None
+    return str(row["hod_id"]), str(row.get("password") or "")
+
+
 def update_password(user_id: str, new_password: str) -> None:
     """Update password for a HOD/admin user."""
 

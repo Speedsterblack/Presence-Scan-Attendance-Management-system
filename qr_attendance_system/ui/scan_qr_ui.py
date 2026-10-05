@@ -266,12 +266,20 @@ class ScanQRUI:
         """Display a dialog with the QR code and URL for the mobile scanner."""
         try:
             import qrcode as qr_lib
+            from PIL import ImageTk
+            from qrcode.image.pil import PilImage
             
             # Generate QR code
             qr = qr_lib.QRCode(version=1, box_size=10, border=5)
             qr.add_data(url)
             qr.make(fit=True)
-            pil_img = qr.make_image(fill_color="black", back_color="white")
+
+            # Create the QR code image
+            pil_img = qr.make_image(
+                image_factory=PilImage,
+                fill_color="black", 
+                back_color="white"
+                ).convert("RGB")
             
             # Convert to PhotoImage for Tkinter
             qr_photo = ImageTk.PhotoImage(pil_img, master=self.root)

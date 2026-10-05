@@ -8,7 +8,7 @@ Desktop QR Code-Based Attendance System for Tertiary Institutions
 
 Project Documentation
 
-Current project stage: functional desktop prototype with role-based access control, QR code generation and scanning, semester-aware administration, audit logging, and developer institution setup.
+Current project stage: functional offline desktop system with role-based access control, QR code generation and scanning, semester-aware administration, audit logging, and a secure Head of University LAN hub.
 
 Prepared by:
 Gad Mensah
@@ -115,21 +115,21 @@ Objectives
 •	To evaluate the performance, accuracy, and usability of the proposed system against defined benchmarks.
 
 1.5  Scope of the Study
-This study focuses on the design and implementation of a QR code-based attendance system for tertiary institutions. The current build supports lecturers, administrators (including Heads of Department), and a separate developer entry point for institution setup. Registered students are issued unique QR codes representing their identity within the system.
+This study focuses on the design and implementation of a QR code-based attendance system for tertiary institutions. The current build supports lecturers, administrators (including Heads of Department), and a Head of University application that manages the central institutional LAN hub. Registered students are issued unique QR codes representing their identity within the system.
 The following capabilities are within scope:
 •	Generation and management of QR codes for registered students.
 •	Webcam-based scanning of student QR codes on a desktop interface.
 •	Automatic attendance recording against the active timetable slot.
 •	Generation of per-course and institution-wide attendance reports and statistics.
 •	Role-based access control differentiating lecturer and administrator functions.
-•	Hashed authentication for lecturers, administrators, and developer access.
+•	Hashed authentication for lecturers and administrators, with pairing-token authentication for the Head LAN hub.
 •	Department-aware lecturer and course creation, tied to the logged-in administrator or Head of Department.
 •	Lecturer profile management, including create, update, password reset, and delete actions.
 •	CSV import for bulk student and course registration with validation feedback shown in the import dialog.
 •	Semester-aware attendance and registration management.
 •	Special-day and timetable validation for attendance recording and dashboard date navigation.
 •	Admin tools such as audit log viewing, semester rollover, semester archive, and CSV template export.
-•	Per-university deployment structure, where each university uses its own local SQLite database with the same schema.
+•	Per-university deployment structure, with separate Head and lecturer SQLite databases connected over a secured local LAN.
 The following areas are explicitly excluded from scope:
 •	Biometric authentication (fingerprint or facial recognition).
 •	Integration with national student or identity databases.
@@ -293,14 +293,14 @@ FR-08	Administrators shall access institution-wide attendance analytics and repo
 FR-09	The system shall support CSV export of attendance data.	Could Have
 
 Functional requirements in detail:
-- Authentication shall support distinct lecturer, administrator, and developer entry points.
+- Authentication shall support distinct lecturer and administrator entry points, with a separate Head of University hub application.
 - Login shall create a session context so later actions can be validated against the active user role and department.
 - QR generation shall create one unique code per student and save it for printing and reuse.
 - Scanning shall validate the QR payload against the student record before any attendance is stored.
 - Attendance shall only be accepted when the lecturer is assigned to the course and the scan occurs within the active timetable window or grace period.
 - Duplicate scans for the same student and timetable slot shall be rejected at application and database level.
 - Administrators shall be able to manage semesters, export CSV templates, and view audit logs.
-- The developer entry point shall allow university and department setup before normal user access.
+- The Head application shall collect university identity during first launch and allow department setup before normal user access.
 - Import and export workflows shall give immediate feedback when records fail validation.
 - Reports shall support per-course, per-student, and semester-based review.
 
@@ -426,10 +426,10 @@ Implementation and Evaluation
 
 
 4.1  System Implementation
-Implementation followed the sprint plan outlined in Chapter Three. Each module was developed, unit-tested, and integrated incrementally before the project advanced to the subsequent sprint. The current build includes authentication, QR generation, webcam scanning, attendance recording, reporting, semester management, audit logging, and developer institution setup.
+Implementation followed the sprint plan outlined in Chapter Three. Each module was developed, unit-tested, and integrated incrementally before the project advanced to the subsequent sprint. The current build includes authentication, QR generation, webcam scanning, attendance recording, reporting, semester management, audit logging, and a secured Head of University LAN hub.
 
 4.1.1  User Authentication Module
-The authentication module implements a secure login workflow for administrators and lecturers, with a separate developer password for institution setup. Credentials are validated against the HOD and lecturer tables through the shared authentication service. On successful authentication, the active user's role and identifier are stored in a session object that governs subsequent access control decisions throughout the application lifetime.
+The authentication module implements a secure login workflow for administrators and lecturers. Credentials are validated against the HOD and lecturer tables through the shared authentication service. On successful authentication, the active user's role and identifier are stored in a session object that governs subsequent access control decisions throughout the application lifetime. Head-to-lecturer communication is separately protected by HTTPS and a persistent pairing token.
 
 Password handling is role-aware and hashed. Existing plaintext credentials are migrated to hashed form where legacy data is encountered, so older records remain usable while still being secured. The same pattern is used for the admin PIN stored in settings, which protects semester rollover and other sensitive admin actions.
 
@@ -457,11 +457,11 @@ The reporting layer currently supports the operational needs of the project stag
 The module also supports the evaluation goals of the project by making attendance results easy to inspect, compare, and verify against timetable slots. That makes it possible to justify the system's effectiveness using real records rather than manual estimates alone.
 
 4.1.5  Administrative Data Management
-The current version of the application uses a per-university deployment model. University, department, lecturer, course, and student records are managed inside one institution-specific SQLite database file rather than across shared tenants. The developer entry point is used to create and manage the institution structure before normal users sign in.
+The current version uses a per-university deployment model. The Head of University application owns the institutional database and exposes selected master data over an authenticated HTTPS LAN hub. Lecturer installations retain local SQLite copies for offline operation and upload attendance through the same secured hub.
 
 Lecturer management supports creating a new lecturer account, updating an existing lecturer's profile details, and resetting the lecturer's password. Passwords are hashed before storage in both lecturer and HOD tables, and the reset flow updates the hash rather than storing plaintext values.
 
-Administrative setup is currently one of the strongest parts of the application stage because it ties the institution structure together. The developer UI seeds the university and departments; the admin and HOD records then inherit that structure; course creation and lecturer assignment remain department-aware; and the session context ensures that admins only manage data within their own institutional scope.
+Administrative setup is currently one of the strongest parts of the application stage because it ties the institution structure together. The Head application collects the university code and name during first-run setup and manages departments and HOD accounts; course creation and lecturer assignment remain department-aware; and the session context ensures that admins only manage data within their own institutional scope.
 
 The current Settings window includes theme controls, attendance grace-period settings, export folder configuration, admin PIN management, semester rollover, semester archive access, audit log viewing, and re-registration of the latest closed semester.
 
@@ -472,9 +472,9 @@ The CSV import workflow for students, courses, and registrations now shows failu
 The admin dashboard date navigation has also been refined. Moving between days now depends on timetable and special-day rules rather than the latest attendance record, so the interface can navigate through scheduled lecture days without being blocked by old attendance history.
 
 4.1.6  Windows Packaging and Installation
-The project provides two separate Windows installers. The main installer packages the normal login and attendance application as `PresenceScan.exe`, while the developer installer packages the institution setup application as `DeveloperPresenceScan.exe`. Both executables are built with PyInstaller and distributed through Inno Setup definitions in the `installer` directory.
+The project provides two separate Windows installers. The main installer packages the lecturer login and attendance application as `PresenceScan.exe`, while the Head installer packages the central application as `HeadOfUniversity.exe`. Both executables are built with PyInstaller and distributed through Inno Setup definitions in the `installer` directory.
 
-The generated installers are named `PresenceScanInstaller.exe` and `PresenceScanDeveloperInstaller.exe`. Each installer creates a Start Menu shortcut and optionally creates a desktop shortcut. Installation uses a per-user application directory so the application can write its local SQLite database without requiring administrator privileges. Python is not required on a target computer after installation because the packaged executables contain the application runtime and dependencies.
+The generated installers are named `PresenceScanInstaller.exe` and `PresenceScanHeadInstaller.exe`. Each installer creates a Start Menu shortcut and optionally creates a desktop shortcut. Installation uses a per-user application directory so the application can write its local SQLite database without requiring administrator privileges. Python is not required on a target computer after installation because the packaged executables contain the application runtime and dependencies.
 
 To build the installers, the build machine requires Python, the dependencies in `requirements-dev.txt` including PyInstaller, and Inno Setup 6. From the project root, the complete build is started with:
 
@@ -482,7 +482,7 @@ To build the installers, the build machine requires Python, the dependencies in 
 powershell -ExecutionPolicy Bypass -File .\installer\build_installer.ps1
 ```
 
-The build script first creates both application executables from their PyInstaller specifications and then compiles both Inno Setup installer packages. The installer package is intended for the current Windows desktop deployment model and does not include a PostgreSQL server requirement.
+The build script first creates both application executables from their PyInstaller specifications and then compiles both Inno Setup installer packages. The installer package is intended for the current Windows desktop deployment model and does not include an internet, PostgreSQL, or Supabase requirement.
 
 4.2  Testing Strategy
 A four-level testing strategy is being employed to ensure system correctness, integration integrity, and usability:
@@ -531,11 +531,11 @@ Based on the findings of this study, the following recommendations are made:
 •	Attendance systems should incorporate clear validation rules to prevent duplicate submissions and guard against unauthorised access.
 •	Staff training and targeted student communication should accompany any system rollout to maximise adoption and minimise disruption during the transition period.
 •	Institutions should keep one database per university deployment to preserve data isolation and simplify administration.
-•	Future releases should extend the system with offline synchronisation and richer analytics to enhance operational resilience and insight.
+•	Future releases should extend the secured LAN hub with per-device token revocation, automatic backups, and richer analytics.
 
 5.3  Future Work
 Several enhancements are identified for future development iterations:
-•	Offline Synchronisation — enabling attendance data captured without a live database connection to synchronise automatically when connectivity is restored.
+•	Per-device hub credentials — issuing and revoking separate pairing tokens for each lecturer computer.
 •	Student Self-Service Portal — a student-facing portal allowing students to review their own attendance records and receive automated alerts when approaching minimum attendance thresholds.
 •	Advanced Analytics — expanding the admin dashboard to include trend analysis, early-warning attendance alerts, and exportable visualisations for institutional reporting.
 •	Mobile Companion App — a companion mobile application enabling QR display and record review, making the system more accessible to students.
