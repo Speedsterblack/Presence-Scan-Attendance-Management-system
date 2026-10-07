@@ -1,46 +1,61 @@
-import qrcode
 import os
-import shutil
+import re
+
+import qrcode
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Primary folder (kept for backwards compatibility)
 QR_FOLDER = os.path.join(BASE_DIR, "qr_codes")
-# Also mirror into assets/qrcodes to support legacy display utilities
-ASSETS_QR_FOLDER = os.path.join(BASE_DIR, "assets", "qrcodes")
 
-os.makedirs(QR_FOLDER, exist_ok=True)
-os.makedirs(ASSETS_QR_FOLDER, exist_ok=True)
+# Only letters, digits, "_" and "-" are allowed, so an ID can never contain
+# path characters such as "..", "/" or "\" and write outside QR_FOLDER.
+_SAFE_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
-def generate_qr(student_id):
-    """Generate a QR PNG for `student_id`.
+def _clean_id(student_id) -> str:
+    sid = str(student_id or "").strip()
+    if not sid or not _SAFE_ID.match(sid):
+        raise ValueError(f"Invalid student ID for QR code: {student_id!r}")
+    return sid
 
-    The file is written to the canonical `qr_codes/` folder and mirrored
-    into `assets/qrcodes/` for compatibility with display utilities.
-    Returns the path to the primary file in `qr_codes/`.
+
+def get_qr_path(student_id) -> str:
+    """Return where this student's QR file lives (it may not exist yet).
+
+    Use this everywhere instead of building the path by hand, so the whole
+    app looks in the same absolute folder no matter where it was launched from.
     """
-    file_path = os.path.join(QR_FOLDER, f"{student_id}.png")
+    return os.path.join(QR_FOLDER, f"{_clean_id(student_id)}.png")
 
-    # Prevent duplicate QR
-    if os.path.exists(file_path):
-        # Ensure mirror exists too
-        try:
-            mirror = os.path.join(ASSETS_QR_FOLDER, f"{student_id}.png")
-            if not os.path.exists(mirror):
-                shutil.copyfile(file_path, mirror)
-        except Exception:
-            pass
+
+def generate_qr(student_id) -> str:
+    """Generate a QR PNG for `student_id` in the `qr_codes/` folder.
+
+    Returns the path to the file. If a valid file already exists it is reused.
+    """
+    sid = _clean_id(student_id)
+
+    # Create the folder when it is needed, not at import time.
+    os.makedirs(QR_FOLDER, exist_ok=True)
+
+    file_path = os.path.join(QR_FOLDER, f"{sid}.png")
+
+    # Reuse an existing file, but not an empty/corrupt one from a failed save.
+    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         return file_path
 
-    qr = qrcode.make(student_id)
-    qr.save(file_path)
-
-    # Mirror to assets folder if possible (non-fatal)
+    # Save to a temp file first, then rename. If saving fails halfway, no
+    # broken PNG is left behind to be mistaken for a finished QR code.
+    tmp_path = file_path + ".tmp"
     try:
-        mirror_path = os.path.join(ASSETS_QR_FOLDER, f"{student_id}.png")
-        shutil.copyfile(file_path, mirror_path)
-    except Exception:
-        # Don't fail the generation on mirror errors
-        pass
+        img = qrcode.make(sid)
+        with open(tmp_path, "wb") as f:
+            img.save(f)
+        os.replace(tmp_path, file_path)
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
     return file_path

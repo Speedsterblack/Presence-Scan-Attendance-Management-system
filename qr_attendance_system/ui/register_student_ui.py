@@ -19,7 +19,7 @@ except ImportError:
     sys.exit(1)
 
 from database import student_db
-from qr.qr_generator import generate_qr
+from qr.qr_generator import generate_qr, get_qr_path
 from ui.assets_utils import apply_background_image, get_logo_image
 
 
@@ -303,15 +303,8 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
     tree.bind('<<TreeviewSelect>>', update_buttons)
 
     def find_qr_path(sid: str):
-        # Try assets mirror first, then primary folder
-        candidates = [
-            os.path.join('assets', 'qrcodes', f"{sid}.png"),
-            os.path.join('qr_codes', f"{sid}.png"),
-        ]
-        for c in candidates:
-            if os.path.exists(c):
-                return c
-        return None
+       path = get_qr_path(sid)
+       return path if os.path.exists(path) else None
 
     def on_preview():
         if not show_qr_func:
