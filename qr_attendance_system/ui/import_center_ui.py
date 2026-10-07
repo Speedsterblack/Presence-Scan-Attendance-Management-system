@@ -325,15 +325,16 @@ class ImportCenterUI:
             messagebox.showinfo(title, f"Imported: {success}\nFailures: 0")
 
     def _on_close(self) -> None:
-        try:
-            self.root.destroy()
-        finally:
+
             if self.parent is not None:
                 try:
                     self.parent.deiconify()
-                    try:
-                        self.parent.state("zoomed")
-                    except Exception:
-                        pass
+                    self.parent.state("zoomed")
+                    self.parent.update()                    
                 except Exception:
-                    pass
+                    pass                
+                try:
+                        self.root.destroy()
+                except Exception:
+                        pass
+                

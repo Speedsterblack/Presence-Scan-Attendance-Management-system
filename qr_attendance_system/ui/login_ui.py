@@ -137,17 +137,34 @@ class LoginUI:
         try:
             login(user)
 
-            if role == "admin":
-                from ui.admin_dashboard_ui import AdminDashboardUI
-                root = tk.Tk()
-                AdminDashboardUI(root)
-            else:
-                from ui.dashboard_ui import DashboardUI
-                root = tk.Tk()
-                DashboardUI(root)
+            root = tk.Tk()
+            try:
+                if role == "admin":
+                    from ui.admin_dashboard_ui import AdminDashboardUI
+                    AdminDashboardUI(root)
+                else:
+                    from ui.dashboard_ui import DashboardUI
+                    DashboardUI(root)
+
+                try:
+                    root.state("zoomed")
+                except Exception:
+                    pass
+                root.update()          # dashboard is drawn before login goes away
+            except Exception:
+                root.destroy()         # don't leave an empty window behind
+                raise
         except Exception as exc:
-            messagebox.showerror("Login Error", f"Login succeeded, but the dashboard could not open:\n{exc}")
+            import traceback
+            traceback.print_exc()      # shows the exact file and line in the terminal
+            messagebox.showerror(
+                "Login Error",
+                f"Login succeeded, but the dashboard could not open:\n{exc}",
+            )
             return
 
-        self.root.destroy()
+        try:
+            self.root.destroy()        # last step before mainloop
+        except Exception:
+            pass
         root.mainloop()

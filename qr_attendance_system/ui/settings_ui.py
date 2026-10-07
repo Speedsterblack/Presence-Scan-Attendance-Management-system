@@ -397,18 +397,17 @@ class SettingsUI:
             pass
 
     def _on_close(self) -> None:
-        try:
-            self.root.destroy()
-        finally:
             if self.parent is not None:
                 try:
-                    self.parent.deiconify()
-                    try:
-                        self.parent.state("zoomed")
-                    except Exception:
-                        pass
+                    self.parent.deiconify()                    
+                    self.parent.state("zoomed")
+                    self.parent.update()
                 except Exception:
                     pass
+            try:
+                self.root.destroy()
+            except Exception:
+                pass
 
     def _format_active_semester(self) -> str:
         try:

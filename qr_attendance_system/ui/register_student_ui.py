@@ -64,7 +64,7 @@ def _add_student_safe(student_id: str, name: str, Department: str, level: str):
         n = p.name.lower()
         if n in ("student_id", "sid", "id"):
             kwargs[p.name] = student_id
-        elif n in ("name", "full_name", "student_name"):
+        elif n in ("name", "full_name", "student_name", "student name"):
             kwargs[p.name] = name
         elif n in ("department", "dept", "Department", "program", "course"):
             kwargs[p.name] = Department
@@ -105,7 +105,7 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
         win.state('zoomed')
     except Exception:
         pass
-    cols = ('student_id', 'name', 'Department', 'level')
+    cols = ('student_id', 'student_name', 'Department', 'level')
 
     # Search/filter area
     search_frame = tk.Frame(win)
@@ -149,7 +149,7 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
         tree.heading(c, text=heading_text, anchor='w')
         if c == 'student_id':
             tree.column(c, width=150, minwidth=130, anchor='w', stretch=False)
-        elif c == 'name':
+        elif c == 'student_name':
             tree.column(c, width=280, minwidth=200, anchor='w', stretch=True)
         elif c == 'Department':
             tree.column(c, width=260, minwidth=180, anchor='w', stretch=True)
@@ -170,16 +170,18 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
     try:
         rows = _get_all_students_safe()
     except Exception as e:  # pragma: no cover - defensive UI code
-        messagebox.showerror('Error', f'Could not load students:\n{e}')
-        win.destroy()
         try:
-            parent.deiconify()
-            try:
-                parent.state("zoomed")
-            except Exception:
+            parent.deiconify()        
+            parent.state("zoomed")
+            parent.update()
+        except Exception:
                 pass
+        try:
+            win.destroy()
         except Exception:
             pass
+        messagebox.showerror('Error', f'Could not load students:\n{e}', parent=parent)
+
         return
         return
 
@@ -195,7 +197,7 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
         digits = ''.join(ch for ch in str(level or '') if ch.isdigit())
         return int(digits) if digits else -1
 
-    def _passes_quick_filter(sid, name, Department, level, txt):
+    def _passes_quick_filter(sid, student_name, department, level, txt):
         mode = current_filter.get()
         level_num = _to_level_number(level)
         if mode == 'lvl100':
@@ -206,8 +208,6 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
             return level_num == 300
         if mode == 'lvl400':
             return level_num == 400
-        if mode == 'no_Department':
-            return not str(Department or '').strip()
         return True
 
     def filter_list(*_):
@@ -243,16 +243,15 @@ def open_students_browser(parent: tk.Tk | tk.Toplevel, show_qr_func: Optional[Ca
     search_var.trace_add('write', filter_list)
 
     def close_browser():
+
         try:
-            win.destroy()
+            parent.deiconify()        
+            parent.state("zoomed")
+            parent.update()                     
         except Exception:
             pass
         try:
-            parent.deiconify()
-            try:
-                parent.state("zoomed")
-            except Exception:
-                pass
+            win.destroy()
         except Exception:
             pass
 
@@ -393,7 +392,7 @@ class RegisterStudentUI:
         # Resolve the department for the current admin (HOD) user.
         # This department will be assigned automatically to every
         # registered student, so we do not ask for it in the form.
-        self.department_name = self._get_admin_department_name()
+        self.department_name = self._get_hod_department()
 
         # Explicit attributes for type checkers
         self.student_id: tk.Entry = self.create_field("Student ID")
@@ -502,8 +501,8 @@ class RegisterStudentUI:
         self.full_name.delete(0, tk.END)
         self.level.delete(0, tk.END)
 
-    def _get_admin_department_name(self) -> str:
-        """Return the department name for the logged-in admin (HOD).
+    def _get_hod_department(self) -> str:
+        """Return the department name for the logged-in HOD.
 
         If anything fails (no session, no department mapping), this
         safely returns an empty string.
@@ -546,14 +545,13 @@ class RegisterStudentUI:
 
     def open_student_ui(self):
         try:
-            self.root.destroy()
-
-            self.parent.deiconify()
-            try:
-                self.parent.state("zoomed")
-            except Exception:
-                pass
-
+            self.parent.deiconify()           
+            self.parent.state("zoomed")
+            self.parent.update()
+        except Exception:
+            pass
+        try:
+            self.root.destroy() 
         except Exception as e:
             print(f"Failed to open student UI: {e}")
 
@@ -639,11 +637,8 @@ class RegisterStudentUI:
     def _show_import_preview(self, parsed, path):
         win = tk.Toplevel(self.root)
         win.title('Import Preview')
-        win.geometry('700x420')
-        try:
-            win.state('zoomed')
-        except Exception:
-            pass
+        win.update_idletasks()
+        win.after(50, lambda: win.state('zoomed'))
 
         lbl = tk.Label(win, text=f'Preview {len(parsed)} rows (select rows to import)', font=('Arial', 12, 'bold'))
         lbl.pack(pady=6)
@@ -709,6 +704,9 @@ class RegisterStudentUI:
         progress.pack(fill='x', padx=8, pady=(6,2))
         status = tk.Label(win, text='Ready')
         status.pack(fill='x', padx=8)
+
+        win.update_idletasks()
+        win.after(50, lambda: win.state('zoomed'))
 
         def do_import():
             sel = tree.selection()

@@ -800,12 +800,14 @@ class CourseUI:
                             master_items[idx] = (code, new_name, selected_lec_name, day_disp, schedule_disp, hours_val, grace_val, txt)
                             break
                     messagebox.showinfo('Saved', 'Course updated')
-                    ed.destroy()
+
                     # refresh both views
                     self.load_courses()
                     filter_list()
+                    ed.destroy()
                 except Exception as e:
                     messagebox.showerror('Error', f'Could not save changes:\n{e}')
+                    
 
             tk.Button(ed, text='Save', bg='#1e90ff', fg='white', command=save_edit).pack(pady=12)
             tk.Button(ed, text='Cancel', command=ed.destroy).pack()

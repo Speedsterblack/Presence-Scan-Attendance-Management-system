@@ -7,6 +7,7 @@ from config import settings as app_settings
 from ui.assets_utils import apply_background_image, get_logo_image
 from ui import styles as ui_styles
 
+
 class ReportUI:
     def __init__(self, root, parent, course_code):
         self.root = root
@@ -16,6 +17,10 @@ class ReportUI:
         # Track the date the lecturer is viewing; defaults to today.
         self._current_date: date = date.today()
 
+        # Chart state, used to redraw when the window is resized.
+        self._last_counts = None       # (present_incl_late, total)
+        self._last_chart_size = None   # (width, height) of the canvas
+
         self.root.title(f"Attendance Report - {course_code}")
         self.root.protocol("WM_DELETE_WINDOW", self.go_back)
 
@@ -23,7 +28,6 @@ class ReportUI:
         theme = app_settings.get_theme()
         bg = theme["bg_color"]
         fg = theme["text_color"]
-        primary = theme["primary_color"]
         self.root.configure(bg=bg)
 
         # Subtle centered background image behind content
@@ -77,6 +81,21 @@ class ReportUI:
             **ui_styles.SECONDARY_BUTTON,
         ).pack(side="left")
 
+        # Bottom button bar. It is packed BEFORE the expanding content area
+        # (with side="bottom") so the Back button is always visible, even
+        # when the window is small.
+        btn_frame = tk.Frame(self.root, bg=bg)
+        btn_frame.pack(side="bottom", fill="x", padx=10, pady=(0, 10))
+        back_btn = tk.Button(
+            btn_frame,
+            text="Back",
+            width=10,
+            font=ui_styles.BUTTON_FONT,
+            command=self.go_back,
+            **ui_styles.PRIMARY_BUTTON,
+        )
+        back_btn.pack(side="right")
+
         # Container for student list (left) and summary chart (right)
         content = tk.Frame(root, bg=bg)
         content.pack(fill="both", expand=True, padx=10, pady=10)
@@ -112,6 +131,9 @@ class ReportUI:
         ).pack(anchor="w")
         self.chart = tk.Canvas(right, bg="#ffffff", height=260, highlightthickness=0)
         self.chart.pack(fill="both", expand=True, pady=(4, 0))
+        # Redraw the chart whenever the canvas changes size (e.g. when the
+        # window is maximized after it was first drawn).
+        self.chart.bind("<Configure>", self._on_chart_resize)
 
         # Resolve function in a Pylance-safe way and cache it
         get_by_course = getattr(attendance_db, "get_attendance_by_course", None)
@@ -133,26 +155,17 @@ class ReportUI:
         # initial load
         self._refresh()
 
-        # Bottom button bar
-        btn_frame = tk.Frame(self.root, bg=bg)
-        btn_frame.pack(fill="x", padx=10, pady=(0, 10))
-        back_btn = tk.Button(
-            btn_frame,
-            text="Back",
-            width=10,
-            font=ui_styles.BUTTON_FONT,
-            command=self.go_back,
-            **ui_styles.PRIMARY_BUTTON,
-        )
-        back_btn.pack(side="right")
-
-        # Enlarge the report window to a comfortable size so
-        # lists are readable without manual resizing.
         # Maximize report window on startup
         self.root.update_idletasks()
-        self.root.state('zoomed')
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            pass
         self.root.minsize(1000, 650)
 
+    # ------------------------------------------------------------------
+    # Date handling
+    # ------------------------------------------------------------------
     def _set_current_date(self, new_date: date) -> None:
         self._current_date = new_date
         self._date_var.set(self._current_date.strftime("%Y-%m-%d"))
@@ -187,6 +200,9 @@ class ReportUI:
 
         self._set_current_date(parsed)
 
+    # ------------------------------------------------------------------
+    # Data + chart
+    # ------------------------------------------------------------------
     def _refresh(self) -> None:
         # clear existing rows
         for iid in self.tree.get_children():
@@ -210,7 +226,20 @@ class ReportUI:
             elif status == "Late":
                 late_count += 1
 
+        # Remember the numbers so the chart can be redrawn on resize.
+        self._last_counts = (present_count + late_count, total_count)
         self._draw_chart(present_count + late_count, total_count, self._theme_bg, self._theme_fg)
+
+    def _on_chart_resize(self, event=None) -> None:
+        """Redraw the chart when the canvas size changes."""
+        if event is not None:
+            size = (event.width, event.height)
+            if size == self._last_chart_size:
+                return
+            self._last_chart_size = size
+        if self._last_counts is not None:
+            present, total = self._last_counts
+            self._draw_chart(present, total, self._theme_bg, self._theme_fg)
 
     def _draw_chart(self, present: int, total: int, bg: str, fg: str) -> None:
         """Draw a simple Present vs Absent bar for this course."""
@@ -288,13 +317,18 @@ class ReportUI:
         self.chart.create_rectangle(legend_x, legend_y, legend_x + 14, legend_y + 14, fill="#e42727", outline="")
         self.chart.create_text(legend_x + 20, legend_y + 7, anchor="w", text="Absent", fill="#2c3e50")
 
+    # ------------------------------------------------------------------
+    # Navigation
+    # ------------------------------------------------------------------
     def go_back(self):
-        self.root.destroy()
+        # Show the parent first, then remove this window (no desktop flash).
         try:
             self.parent.deiconify()
-            try:
-                self.parent.state("zoomed")
-            except Exception:
-                pass
+            self.parent.state("zoomed")
+            self.parent.update()
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
         except Exception:
             pass

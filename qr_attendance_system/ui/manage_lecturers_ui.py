@@ -224,15 +224,14 @@ class ManageLecturersUI:
         raise RuntimeError("Could not determine the current admin department")
 
     def go_back(self):
+
         try:
-            self.root.destroy()
+            self.parent.deiconify()
+            self.parent.state('zoomed')
+            self.parent.update()
         except Exception:
             pass
         try:
-            self.parent.deiconify()
-            try:
-                self.parent.state("zoomed")
-            except Exception:
-                pass
+            self.root.destroy()
         except Exception:
             pass

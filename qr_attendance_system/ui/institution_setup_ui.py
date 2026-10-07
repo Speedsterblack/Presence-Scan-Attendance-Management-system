@@ -89,13 +89,11 @@ class InstitutionSetupUI:
         tree.heading("name", text="Department Name", anchor="w")
         tree.heading("admin_id", text="Admin ID", anchor="w")
         tree.heading("admin_password", text="Admin Password", anchor="w")
-        tree.heading("university", text="University", anchor="w")
         tree.heading("internal_id", text="", anchor="w")
         tree.column("code", width=120, anchor="w")
         tree.column("name", width=250, anchor="w")
         tree.column("admin_id", width=150, anchor="w")
         tree.column("admin_password", width=150, anchor="w")
-        tree.column("university", width=120, anchor="w")
         tree.column("internal_id", width=0, stretch=False)
         tree.pack(fill="both", expand=True, padx=8, pady=(4, 8))
         self.dept_tree = tree

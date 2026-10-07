@@ -16,9 +16,9 @@ from ui.assets_utils import get_logo_image, apply_background_image
 from ui import styles as ui_styles
 
 _THEME = app_settings.get_theme()
-BG_COLOR = _THEME["bg_color"]
-PRIMARY = _THEME["primary_color"]
-TEXT = _THEME["text_color"]
+BG_COLOR: str = str (_THEME["bg_color"])
+PRIMARY: str = str (_THEME["primary_color"])
+TEXT: str = str (_THEME["text_color"])
 
 # Dedicated background for the chart area; always white so
 # the graph stands out clearly regardless of theme.

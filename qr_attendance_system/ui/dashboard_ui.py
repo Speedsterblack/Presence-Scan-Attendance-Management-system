@@ -1,6 +1,7 @@
 import tkinter as tk
 from typing import Any, cast
 from tkinter import messagebox
+#from qr_attendance_system.models import course
 from ui.student_ui import StudentUI
 from ui.course_ui import CourseUI
 from ui.report_ui import ReportUI
@@ -374,20 +375,18 @@ class DashboardUI:
 
         def open_selected():
             course = course_var.get()  # this is the selected course_code string
-            try:
-                window_was_zoomed = window.state() == "zoomed"
-            except Exception:
-                window_was_zoomed = False
-            window.destroy()
-            report_win = tk.Toplevel(self.root)
-            ReportUI(report_win, parent=self.root, course_code=course)
-            self.root.withdraw()
-            try:
-                report_win.state("zoomed")
-            except Exception:
-                pass
 
-        tk.Button(window, text="Open Report", command=open_selected).pack(pady=15)
+            try:
+               report_win = tk.Toplevel(self.root)
+               ReportUI(report_win, parent=self.root, course_code=course)
+               report_win.update_idletasks()
+               report_win.state("zoomed")
+               report_win.update()
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not open report:\n{e}")
+                return   
+            self.root.withdraw()
+            window.destroy()
 
     def open_settings(self):
         from ui.settings_ui import SettingsUI
@@ -420,12 +419,6 @@ class DashboardUI:
         except Exception:
             pass
 
-        # close current window and show login UI
-        try:
-            self.root.destroy()
-        except Exception:
-            pass
-
         # Launch login screen in a fresh root (mirrors LoginUI behavior)
         try:
             from ui.login_ui import LoginUI
@@ -435,10 +428,19 @@ class DashboardUI:
                 new_root.state("zoomed")
             except Exception:
                 pass
+            new_root.update()
+
+                           # close current window and show login UI
+            try:
+                self.root.destroy()
+            except Exception:
+                pass      
             new_root.mainloop()
-        except Exception:
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not launch login screen:\n{e}")
             # if launching login UI fails, exit silently
             pass
+   
 
 
 def _as_tk_image(image: Any) -> Any:

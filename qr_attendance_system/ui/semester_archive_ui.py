@@ -259,15 +259,15 @@ class SemesterArchiveUI:
             messagebox.showerror("Error", f"Could not export semester archive:\n{e}")
 
     def _on_close(self) -> None:
+
+        if self.parent is not None:
+            try:
+                self.parent.deiconify()                    
+                self.parent.state("zoomed")
+                self.parent.update()
+            except Exception:
+                pass
         try:
             self.root.destroy()
-        finally:
-            if self.parent is not None:
-                try:
-                    self.parent.deiconify()
-                    try:
-                        self.parent.state("zoomed")
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
+        except Exception:
+            pass

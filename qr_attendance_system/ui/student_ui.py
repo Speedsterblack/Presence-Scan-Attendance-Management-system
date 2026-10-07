@@ -105,11 +105,9 @@ class StudentUI:
 
         self.root.withdraw()
         window = tk.Toplevel()
-        try:
-            window.state('zoomed')
-        except Exception:
-            pass
         RegisterStudentUI(window, parent=self.root)
+        window.update_idletasks()
+        window.after(50, lambda: window.state('zoomed'))
 
     def open_remove_student_ui(self):
         try:
@@ -190,17 +188,18 @@ class StudentUI:
         # populate
         try:
             rows = get_all_students()
-        except Exception as e:
-            messagebox.showerror('Error', f'Could not load students:\n{e}')
-            win.destroy()
+        except Exception as e:            
             try:
-                self.root.deiconify()
-                try:
-                    self.root.state("zoomed")
-                except Exception:
-                    pass
+                self.root.deiconify()                
+                self.root.state("zoomed")
+                self.root.update()
             except Exception:
                 pass
+            try:
+                win.destroy()    
+            except Exception:
+                pass
+            messagebox.showerror('Error', f'Could not load students:\n{e}')            
             return
 
         # keep a master list for filtering
@@ -313,20 +312,20 @@ class StudentUI:
         undo_btn.pack(side='left', padx=6)
         tk.Button(btnf, text='Delete Selected', bg='#e53935', fg='white', command=lambda: (do_delete(), undo_btn.config(state='normal' if self.last_deleted_students else 'disabled'))).pack(side='left', padx=6)
         def _cancel_and_restore():
+
+            try:
+                self.root.deiconify()                
+                self.root.state("zoomed")
+                self.root.update()
+            except Exception:
+                pass
             try:
                 win.destroy()
             except Exception:
-                pass
-            try:
-                self.root.deiconify()
-                try:
-                    self.root.state("zoomed")
-                except Exception:
-                    pass
-            except Exception:
-                pass
+                pass            
 
         tk.Button(btnf, text='Cancel', command=_cancel_and_restore).pack(side='right', padx=6)
+        win.protocol("WM_DELETE_WINDOW", _cancel_and_restore)
 
         def undo_delete():
             if not self.last_deleted_students:
@@ -384,12 +383,13 @@ class StudentUI:
             pass
 
     def go_back(self):
-        self.root.destroy()
         try:
-            self.parent.deiconify()
-            try:
-                self.parent.state("zoomed")
-            except Exception:
-                pass
+            self.parent.deiconify()            
+            self.parent.state("zoomed")
+            self.parent.update()
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
         except Exception:
             pass

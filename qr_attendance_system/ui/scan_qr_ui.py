@@ -568,16 +568,16 @@ class ScanQRUI:
 
     def on_close(self) -> None:
         self.stop_camera()
-        try:
-            self.root.destroy()
-        except Exception:
-            pass
+
         if self.parent is not None:
             try:
-                self.parent.deiconify()
-                try:
-                    self.parent.state("zoomed")
-                except Exception:
-                    pass
+                self.parent.deiconify()            
+                self.parent.state("zoomed")
+                self.parent.update()
+            except Exception:
+                pass
+
+            try:
+               self.root.destroy()
             except Exception:
                 pass

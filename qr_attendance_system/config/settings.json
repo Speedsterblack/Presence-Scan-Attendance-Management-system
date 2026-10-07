@@ -11,6 +11,10 @@
   "export": {
     "default_directory": "C:\\Users\\speed\\OneDrive\\Documents\\dash copy\\Final year Project\\qr_attendance_system\\reports"
   },
+  "network": {
+    "head_url": "https://172.27.80.1:8765",
+    "head_token": "hvyzi79ADtpcMEy_qQAN8sZn00BwW2YqpwrELwtj5tE"
+  },
   "admin": {
     "auto_refresh_enabled": true,
     "auto_refresh_interval_seconds": 10,

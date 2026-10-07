@@ -225,19 +225,17 @@ class CourseRegistrationUI:
         self.refresh_registered()
 
     def safe_close(self) -> None:
+
+        if self.parent is not None:
+            try:
+                self.parent.deiconify()                
+                self.parent.state("zoomed")
+                self.parent.update()
+            except Exception:
+                pass
         try:
             self.root.destroy()
         except Exception:
-            pass
-        if self.parent is not None:
-            try:
-                self.parent.deiconify()
-                try:
-                    self.parent.state("zoomed")
-                except Exception:
-                    pass
-            except Exception:
-                pass
-
+            pass    
     def on_close(self) -> None:
         self.safe_close()
