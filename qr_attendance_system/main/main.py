@@ -4,6 +4,11 @@ from database.db_init import create_tables
 from database import attendance_cache
 from services import lan_sync
 from ui.login_ui import LoginUI
+import logging, os, sys
+if getattr(sys, "frozen", False):
+       log_dir = os.path.join(os.environ.get("LOCALAPPDATA", "."), "Presence Scan")
+       os.makedirs(log_dir, exist_ok=True)
+       logging.basicConfig(filename=os.path.join(log_dir, "app.log"), level=logging.ERROR)
 
 
 def main() -> None:

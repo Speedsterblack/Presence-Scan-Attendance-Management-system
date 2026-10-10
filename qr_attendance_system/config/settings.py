@@ -7,10 +7,11 @@ from typing import Any, Dict
 
 from utils import session as _session
 from utils.security import hash_password, is_hashed_password
+from utils.paths import app_data_dir, default_reports_dir, is_frozen
 
 
 _BASE_DIR = Path(__file__).resolve().parent
-_SETTINGS_FILE = _BASE_DIR / "settings.json"
+_SETTINGS_FILE = (app_data_dir() / "settings.json") if is_frozen() else (_BASE_DIR / "settings.json")
 
 
 _DEFAULT_SETTINGS: Dict[str, Any] = {
@@ -28,7 +29,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
 	},
 	"export": {
 		# default directory for exported CSVs/reports
-		"default_directory": str((_BASE_DIR.parent / "reports").resolve()),
+		"default_directory": str((default_reports_dir()).resolve()),
 	},
 	"network": {
 		# URL of the Head of University LAN hub used by lecturer clients
@@ -38,7 +39,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
 	"admin": {
 		# auto-refresh for the admin analytics dashboard
 		"auto_refresh_enabled": True,
-		"auto_refresh_interval_seconds": 10,
+		"auto_refresh_interval_seconds": 5,
 		# hashed PIN used for semester rollover and sensitive admin actions
 		"pin_hash": "",
 	},

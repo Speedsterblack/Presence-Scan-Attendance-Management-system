@@ -7,10 +7,9 @@ from pathlib import Path
 project_root = Path(SPECPATH).resolve()
 
 datas = [
-    (str(project_root / 'config' / 'settings.json'), 'config'),
     (str(project_root / 'templates' / 'mobile_scanner.html'), 'templates'),
-    (str(project_root / 'assets' / 'images' / 'background.png'), 'assets/images'),
-    (str(project_root / 'assets' / 'icons' / 'Presence_Scan.ico'), 'assets/icons'),
+    (str(project_root / 'assets'), 'assets')
+   
 ]
 
 
@@ -48,4 +47,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=str(project_root/ 'assets' / 'icons' / 'Presence_Scan.ico)
 )

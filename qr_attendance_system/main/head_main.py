@@ -20,6 +20,11 @@ from database.db_init import create_tables
 from database.university_db import add_university, get_all_University
 from services.head_hub import start_head_hub_server
 from ui.institution_setup_ui import InstitutionSetupUI
+import logging, os, sys
+if getattr(sys, "frozen", False):
+       log_dir = os.path.join(os.environ.get("LOCALAPPDATA", "."), "Presence Scan")
+       os.makedirs(log_dir, exist_ok=True)
+       logging.basicConfig(filename=os.path.join(log_dir, "app.log"), level=logging.ERROR)
 
 
 def _setup_university(root: tk.Tk) -> bool:

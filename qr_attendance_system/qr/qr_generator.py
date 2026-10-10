@@ -2,9 +2,10 @@ import os
 import re
 
 import qrcode
+from utils.paths import app_data_dir
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-QR_FOLDER = os.path.join(BASE_DIR, "qr_codes")
+QR_FOLDER = str(app_data_dir() / "qr_codes")
 
 # Only letters, digits, "_" and "-" are allowed, so an ID can never contain
 # path characters such as "..", "/" or "\" and write outside QR_FOLDER.
